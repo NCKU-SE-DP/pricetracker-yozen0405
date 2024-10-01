@@ -1,7 +1,7 @@
 <template>
   <div :class="{ active: isMenuActive, 'navbar-container': true }">
     <header>
-      <RouterLink class="nav-title" to="/overview">價格追蹤小幫手</RouterLink>
+      <RouterLink class="nav-title" @click="closeMenu" to="/overview">價格追蹤小幫手</RouterLink>
       <div class="hamburger" @click="toggleMenu">
         <div class="line"></div>
         <div class="line"></div>
@@ -65,7 +65,11 @@ export default {
       if (window.innerWidth <= 768) {
         return;
       }
-      console.log("im in");
+
+      if (this.indicatorInterval) {
+        clearInterval(this.indicatorInterval);
+        this.indicatorInterval = null;
+      }
 
       const activeLink = this.$el.querySelector('.nav-link.active');
       const indicator = this.$refs.indicator;
@@ -73,14 +77,10 @@ export default {
       if (activeLink) {
         indicator.style.left = `${activeLink.offsetLeft}px`;
         indicator.style.width = `${activeLink.offsetWidth}px`;
-        clearInterval(this.indicatorInterval);
-        this.indicatorInterval = null;
       } else {
-        if (!this.indicatorInterval) {
           this.indicatorInterval = setInterval(() => {
             this.setIndicatorPosition();
           }, 100);
-        }
       }
     },
     onResize() {
