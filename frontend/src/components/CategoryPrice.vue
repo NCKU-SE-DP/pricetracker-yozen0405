@@ -1,7 +1,7 @@
 <template>
     <div class="category-price-wrapper">
         <h2>{{ categoryName }}</h2>
-        <div v-if="isLoading">Loading...</div>
+        <div v-if="isLoading" class="loading">Loading...</div>
         <div v-if="errorMessage" class="error">{{ errorMessage }}</div>
         <table v-if="!isLoading && !errorMessage">
             <thead>
@@ -57,42 +57,91 @@ export default {
         latestPrice(prices_str) {
             let number = prices_str.split(',').map(Number);
             let i = number.length - 1;
-            while (i >= 0 && number[i]==0) {
+            while (i >= 0 && number[i] == 0) {
                 i--;
             }
-            return i==-1 ? "-" : number[i];
+            return i == -1 ? "-" : number[i];
         }
     }
 };
 </script>
 
 <style scoped>
-.error {
-    color: red;
+.category-price-wrapper {
+    background-color: #f9fafc;
+    border-radius: 10px;
+    padding: 1.5em;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+    max-width: 1000px;
+    min-width: 45vw;
+    margin: 0 auto;
+    font-family: 'Helvetica Neue', sans-serif;
 }
+
+h2 {
+    font-size: 1.8em;
+    font-weight: 700;
+    margin-bottom: 1em;
+    color: black;
+    text-align: center;
+}
+
+.loading {
+    text-align: center;
+    font-size: 1.2em;
+    color: #999;
+}
+
+.error {
+    color: #e74c3c;
+    text-align: center;
+    font-size: 1.2em;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
     background-color: white;
-    /* text-align: center; */
+    overflow: hidden;
+    border-radius: 10px;
 }
+
 th, td {
     border: 1px solid #ddd;
+    padding: 1em;
+    font-size: 1em;
+    color: #333;
     text-align: center;
-    padding: .5em 1em;
 }
-th{
+
+th {
     background-color: #355f81;
     color: white;
+    font-weight: 600;
 }
-h2{
-    margin-bottom: .5em;
-    font-size: 1.5em;
-    font-weight: bold;
+
+tr {
+    background-color: #f8f9fa;
 }
-.category-price-wrapper{
-    background-color: white;
-    border-radius: 1em;
-    padding: 2em;
+
+tr:nth-child(odd) {
+    background-color: #f1f3f5;
+}
+
+@media (max-width: 768px) {
+    .category-price-wrapper {
+        padding: 1em;
+        border-radius: 0px;
+    }
+
+    h2 {
+        font-size: 1.5em;
+    }
+
+    th, td {
+        padding: 0.75em;
+        font-size: 0.9em;
+    }
 }
 </style>

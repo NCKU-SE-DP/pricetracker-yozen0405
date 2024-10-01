@@ -1,5 +1,5 @@
 <template>
-    <div v-if="visible" class="cover">
+    <div v-if="visible" class="cover" @click.self="close">
         <div class="news-dialog">
             <i class="bi bi-x-lg close-btn" @click="close"></i>
             <div class="content">
@@ -27,6 +27,10 @@ export default {
     },
     methods: {
         close() {
+            const scrollY = document.body.style.top; 
+            document.body.style.position = ''; 
+            document.body.style.top = ''; 
+            window.scrollTo(0, parseInt(scrollY || '0') * -1);
             this.$emit('update:visible', false);
         }
     },
@@ -54,24 +58,32 @@ export default {
 }
 .content{
     overflow-y: auto;
-    height: 100%;
     text-align: start;
     padding: 3em;
+    height: 100%;
 }
+
+.content a {
+    overflow-wrap: break-word;
+}
+
 .time{
     color: #888;
 }
+
 .news-dialog h2{
     margin: 0;
     font-size: 1.5em;
 }
+
 .news-dialog p{
     font-size: 1.2em;
     margin: 1em 0;
 }
+
 .cover{
     width: 100%;
-    height: 100%;
+    height: 100%; /* set it to the constrainted size */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -82,6 +94,7 @@ export default {
     content: ' ';
     background-color: rgba(0, 0, 0, 0.5);
 }
+
 .close-btn{
     position: absolute;
     top: .5em;
@@ -89,5 +102,20 @@ export default {
     font-size: 2em;
     cursor: pointer;
     color: #888;
+}
+
+@media (max-width: 768px) {
+    .news-dialog {
+        width: 100%;
+        height: 100%;
+        border-radius: 0em;
+        padding: 4em 1.5em 2em;
+        overflow-y: scroll; /* Set the height to 100% of the screen, allowing scrolling if the content overflows. */
+    }
+    .content {
+        padding: 0em 0em 0em 0em;
+        overflow-y: visible;
+        height: auto; /* set it to its original height */
+    }
 }
 </style>

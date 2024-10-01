@@ -161,4 +161,10 @@ export default {
   animation: l3 1s infinite linear;
 }
 @keyframes l3 {to{transform: rotate(1turn)}}
+
+@media (max-width: 768px) {
+    .texts {
+        margin-right: 0em;
+    }
+}
 </style>
