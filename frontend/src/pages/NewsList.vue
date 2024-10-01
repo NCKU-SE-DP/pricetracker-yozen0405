@@ -1,6 +1,8 @@
 <template>
     <div class="wrapper">
-        <h1>相關新聞</h1>
+        <div class="title-container">
+            <h1>相關新聞</h1>
+        </div>
         <div class="search-bar">
             <input v-model="prompt" placeholder="輸入你的搜尋prompt，讓AI幫你找相關的新聞吧！例如：「我想獲取雞蛋價格的資訊」" class="search-input"/>
             <i class="bi bi-search" @click="searchNewsBasedOnPrompt"></i>
@@ -62,6 +64,9 @@ export default {
             }
         },
         showDialog(news) {
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
             this.selectedNews = news;
             this.isDialogVisible = true;
         },
@@ -81,6 +86,7 @@ export default {
     box-sizing: border-box;
     width: 100%;
 }
+
 .content {
     background-color: white;
     margin-top: 1em;
@@ -88,7 +94,7 @@ export default {
     padding: 1em 3em;
 }
 .news-item{
-    border-bottom: #aaaaaa 1px solid;
+    border-bottom: rgb(224, 222, 222) 1px solid;
 }
 .news-item:last-child{
     border-bottom: none;
@@ -119,5 +125,29 @@ export default {
 
 .search-bar button:hover{
     cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .wrapper {
+        padding: 3em 0em;
+    }
+
+    .search-bar {
+        width: 95%;
+        padding: .8em;
+    }
+
+    .search-bar input {
+        font-size: 1em;
+    }
+
+    .content {
+        border-radius: 0em;
+        padding: 1em 0em;
+    }
+
+    .title-container {
+        margin-left: 4vw;
+    }
 }
 </style>
