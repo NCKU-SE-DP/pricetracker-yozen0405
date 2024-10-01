@@ -66,25 +66,34 @@ export default {
         return;
       }
 
-      if (this.indicatorInterval) {
-        clearInterval(this.indicatorInterval);
-        this.indicatorInterval = null;
-      }
-
       const activeLink = this.$el.querySelector('.nav-link.active');
       const indicator = this.$refs.indicator;
 
       if (activeLink) {
         indicator.style.left = `${activeLink.offsetLeft}px`;
         indicator.style.width = `${activeLink.offsetWidth}px`;
+        if (this.indicatorInterval) {
+          clearInterval(this.indicatorInterval);
+          this.indicatorInterval = null;
+        }
       } else {
-          this.indicatorInterval = setInterval(() => {
+        if (!this.indicatorInterval) {
+          indicator.style.width = `0px`;
+          this.indicatorInterval = setTimeout(() => {
             this.setIndicatorPosition();
           }, 100);
+        }
       }
     },
     onResize() {
       this.setIndicatorPosition();
+    }
+  },
+  watch: {
+    $route() {
+      this.$nextTick(() => {
+        this.setIndicatorPosition();
+      });
     }
   },
   mounted() {
