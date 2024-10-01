@@ -9,11 +9,12 @@
       </div>
     </header>
     <nav :class="{ active: isMenuActive }">
-      <RouterLink to="/overview" @click="closeMenu">物價概覽</RouterLink>
-      <RouterLink to="/trending" @click="closeMenu">物價趨勢</RouterLink>
-      <RouterLink to="/news" @click="closeMenu">相關新聞</RouterLink>
-      <RouterLink v-if="!isLoggedIn" to="/login" @click="closeMenu">登入</RouterLink>
-      <span v-else @click="logout; closeMenu">Hi, {{ getUserName }}! 登出</span>
+      <RouterLink to="/overview" @click="closeMenu" class="nav-link" active-class="active" @mouseenter="moveIndicator" @mouseleave="setIndicatorPosition">物價概覽</RouterLink>
+      <RouterLink to="/trending" @click="closeMenu" class="nav-link" active-class="active" @mouseenter="moveIndicator" @mouseleave="setIndicatorPosition">物價趨勢</RouterLink>
+      <RouterLink to="/news" @click="closeMenu" class="nav-link" active-class="active"  @mouseenter="moveIndicator" @mouseleave="setIndicatorPosition">相關新聞</RouterLink>
+      <RouterLink v-if="!isLoggedIn" to="/login" @click="closeMenu" active-class="active" class="nav-link" @mouseenter="moveIndicator" @mouseleave="setIndicatorPosition">登入</RouterLink>
+      <span v-else class="nav-link" @click="logout; closeMenu" active-class="active" @mouseenter="moveIndicator" @mouseleave="setIndicatorPosition">Hi, {{ getUserName }}! 登出</span>
+      <span class="indicator" ref="indicator"></span>
     </nav>
   </div>
 </template>
@@ -26,6 +27,7 @@ export default {
   data() {
     return {
       isMenuActive: false,
+      indicatorInterval: null,
     };
   },
   computed: {
@@ -49,8 +51,52 @@ export default {
       const userStore = useAuthStore();
       userStore.logout();
     },
+    moveIndicator(event) {
+      if (window.innerWidth <= 768) {
+        return;
+      }
+      const indicator = this.$refs.indicator;
+      const target = event.currentTarget;
+
+      indicator.style.left = `${target.offsetLeft}px`;
+      indicator.style.width = `${target.offsetWidth}px`;
+    },
+    setIndicatorPosition() {
+      if (window.innerWidth <= 768) {
+        return;
+      }
+      console.log("im in");
+
+      const activeLink = this.$el.querySelector('.nav-link.active');
+      const indicator = this.$refs.indicator;
+
+      if (activeLink) {
+        indicator.style.left = `${activeLink.offsetLeft}px`;
+        indicator.style.width = `${activeLink.offsetWidth}px`;
+        clearInterval(this.indicatorInterval);
+        this.indicatorInterval = null;
+      } else {
+        if (!this.indicatorInterval) {
+          this.indicatorInterval = setInterval(() => {
+            this.setIndicatorPosition();
+          }, 100);
+        }
+      }
+    },
+    onResize() {
+      this.setIndicatorPosition();
+    }
   },
-};
+  mounted() {
+    this.setIndicatorPosition();
+    this.$nextTick(() => {
+      window.addEventListener('resize', this.onResize);
+    });
+  },
+  beforeUnmount() { 
+    window.removeEventListener('resize', this.onResize); 
+  }
+}
 </script>
 
 <style scoped>
@@ -73,11 +119,31 @@ export default {
   color: #2c3e50 !important;
 }
 
-nav a {
+.nav-link {
+  position: relative; 
+  display: inline-block; 
+  padding: 1em .5em;
   text-decoration: none;
   color: #575B5D;
-  margin: 0 .5em;
+  margin: 0 0em;
   font-size: 1.2em;
+}
+
+.indicator {
+  position: absolute;
+  height: .2em;
+  background-color: #2c3e50;
+  transition: left 0.3s ease, width 0.3s ease;
+  bottom: -4px;
+  width: 96px;
+}
+
+nav {
+  position: relative;
+}
+
+.nav-link.active {
+  font-weight: bold;
 }
 
 .hamburger {
@@ -137,7 +203,7 @@ nav a {
     width: 100%;
   }
 
-  nav a {
+  .nav-link {
     padding: 0.9em;
     margin: 0;
     text-align: center;
@@ -149,17 +215,21 @@ nav a {
     transition: background-color 0.3s;
   }
 
-  nav a:first-child {
+  .nav-link:first-child {
     border-top: 1px solid rgba(0, 0, 0, 0.1);
   }
 
-  nav a:hover {
+  .nav-link:hover {
     background-color: rgba(224, 223, 223, 0.827);
   }
 
   .navbar-container.active nav {
     display: flex;
     animation: slideDown 0.3s ease-out forwards;
+  }
+
+  .indicator {
+    display: none;
   }
 
   @keyframes slideDown {
