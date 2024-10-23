@@ -71,7 +71,7 @@ sentry_sdk.init(
 )
 
 app = FastAPI()
-bgs = BackgroundScheduler()
+schedulers = BackgroundScheduler()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 app.add_middleware(
@@ -193,60 +193,48 @@ def fetch_and_process_news(is_initial=False):
             },
             {"role": "user", "content": f"{article_title}"},
         ]
-
-        # Get AI evaluation on relevance of the news article title
         ai_response = OpenAI(api_key="xxx").chat.completions.create(
             model="gpt-3.5-turbo",
             messages=relevance_check_prompt,
         )
         relevance = ai_response.choices[0].message.content
-
-        # If the relevance is high, fetch full article details and process
         if relevance == "high":
             response = requests.get(article["titleLink"])
             soup = BeautifulSoup(response.text, "html.parser")
-
-            # Extract title and time from the article
+            # 標題
             detailed_title = soup.find("h1", class_="article-content__title").text
             publication_time = soup.find("time", class_="article-content__time").text
-
-            # Extract article content
+            # 定位到包含文章内容的 <section>
             content_section = soup.find("section", class_="article-content__editor")
+
             content_paragraphs = [
                 p.text
                 for p in content_section.find_all("p")
                 if p.text.strip() != "" and "▪" not in p.text
             ]
-            
-            # Prepare detailed news data
-            detailed_news_data = {
+            detailed_news =  {
                 "url": article["titleLink"],
                 "title": detailed_title,
                 "time": publication_time,
                 "content": content_paragraphs,
             }
-
-            # Generate summary and reason using AI
             summary_prompt = [
                 {
                     "role": "system",
                     "content": "你是一個新聞摘要生成機器人，請統整新聞中提及的影響及主要原因 (影響、原因各50個字，請以json格式回答 {'影響': '...', '原因': '...'})",
                 },
-                {"role": "user", "content": " ".join(detailed_news_data["content"])},
+                {"role": "user", "content": " ".join(detailed_news["content"])},
             ]
 
             summary_completion = OpenAI(api_key="xxx").chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=summary_prompt,
             )
-            summary_result = json.loads(summary_completion.choices[0].message.content)
-
-            # Add summary and reason to detailed news data
-            detailed_news_data["summary"] = summary_result["影響"]
-            detailed_news_data["reason"] = summary_result["原因"]
-
-            # Add the news article to the database
-            add_news_article(detailed_news_data)
+            summary_result = summary_completion.choices[0].message.content
+            summary_result = json.loads(summary_result)
+            detailed_news["summary"] = summary_result["影響"]
+            detailed_news["reason"] = summary_result["原因"]
+            add_news_article(detailed_news)
 
 @app.on_event("startup")
 def start_scheduler():
@@ -255,12 +243,12 @@ def start_scheduler():
         # should change into simple factory pattern
         fetch_and_process_news()
     db.close()
-    bgs.add_job(fetch_and_process_news, "interval", minutes=100)
-    bgs.start()
+    schedulers.add_job(fetch_and_process_news, "interval", minutes=100)
+    schedulers.start()
 
 @app.on_event("shutdown")
 def shutdown_scheduler():
-    bgs.shutdown()
+    schedulers.shutdown()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/users/login")
@@ -275,7 +263,7 @@ def session_opener():
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-def check_user_password_is_correct(db_session, username, password):
+def validate_user_credentials(db_session, username, password):
     user = db_session.query(User).filter(User.username == username).first()
     if not verify_password(password, user.hashed_password):
         return False
@@ -305,7 +293,7 @@ async def login_for_access_token(
         form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(session_opener)
 ):
     """login"""
-    user = check_user_password_is_correct(db, form_data.username, form_data.password)
+    user = validate_user_credentials(db, form_data.username, form_data.password)
     access_token = create_access_token(
         user_data={"sub": str(user.username)}, expires_delta=timedelta(minutes=30)
     )
@@ -349,7 +337,7 @@ def get_article_upvote_details(article_id, uid, db):
     return upvote_count, has_voted
 
 @app.get("/api/v1/news/news")
-def read_news(db=Depends(session_opener)):
+def fetch_news_with_upvote_details(db=Depends(session_opener)):
     """
     read new
 
@@ -368,21 +356,21 @@ def read_news(db=Depends(session_opener)):
 @app.get(
     "/api/v1/news/user_news"
 )
-def read_user_news(
+def get_user_specific_news(
         db=Depends(session_opener),
-        u=Depends(authenticate_user_token)
+        user=Depends(authenticate_user_token)
 ):
     """
     read user new
 
     :param db:
-    :param u:
+    :param user:
     :return:
     """
     news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
     result = []
     for article in news:
-        upvotes, upvoted = get_article_upvote_details(article.id, u.id, db)
+        upvotes, upvoted = get_article_upvote_details(article.id, user.id, db)
         result.append(
             {
                 **article.__dict__,
@@ -447,7 +435,7 @@ class NewsSumaryRequestSchema(BaseModel):
 
 @app.post("/api/v1/news/news_summary")
 async def news_summary(
-        payload: NewsSumaryRequestSchema, u=Depends(authenticate_user_token)
+        payload: NewsSumaryRequestSchema, user=Depends(authenticate_user_token)
 ):
     response_data = {}
     summary_generation_prompt = [
