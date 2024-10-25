@@ -8,7 +8,7 @@ class PricingConfig(BaseSettings):
         env_prefix = "PRICING_"
         extra = "ignore"
 
-    necessities_price_api_url: str 
+    NECESSITIES_PRICE_API_URL: str 
     
 pricing_settings = PricingConfig()
 
