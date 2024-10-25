@@ -22,7 +22,13 @@ router = APIRouter(
 async def login_for_access_token(
         form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(session_opener)
 ):
-    """login"""
+    """
+    Authenticates a user and generates an access token.
+
+    :param form_data: Form data containing username and password.
+    :param db: Database session dependency.
+    :return: JSON with access token and token type.
+    """
     user = validate_user_credentials(db, form_data.username, form_data.password)
     access_token = create_access_token(
         user_data={"sub": str(user.username)}, expires_delta=timedelta(minutes=30)
@@ -31,7 +37,13 @@ async def login_for_access_token(
 
 @router.post("/users/register")
 def create_user(user: UserAuthSchema, db: Session = Depends(session_opener)):
-    """create user"""
+    """
+    Registers a new user with a hashed password.
+
+    :param user: User data containing username and password.
+    :param db: Database session dependency.
+    :return: The created user object.
+    """
     hashed_password = pwd_context.hash(user.password)
     db_user = User(username=user.username, hashed_password=hashed_password)
     db.add(db_user)
