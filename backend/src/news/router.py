@@ -12,7 +12,7 @@ from ..database import session_opener
 from .models import NewsArticle
 from .schemas import PromptRequest, NewsSumaryRequestSchema
 from .service import (
-    _id_counter,
+    article_id_counter,
     fetch_news_articles_by_keyword,
     get_article_upvote_details,
     toggle_upvote,
@@ -101,7 +101,7 @@ async def search_news_articles(request: PromptRequest):
                 "content": paragraphs,
             }
             detailed_news["content"] = " ".join(detailed_news["content"])
-            detailed_news["id"] = next(_id_counter)
+            detailed_news["id"] = next(article_id_counter)
             news_list.append(detailed_news)
         except Exception as e:
             print(e)

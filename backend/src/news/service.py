@@ -13,7 +13,7 @@ from .models import NewsArticle
 from ..auth.models import user_news_association_table
 from .config import news_config
 
-_id_counter = itertools.count(start=1000000)
+article_id_counter = itertools.count(start=1000000)
 
 def add_news_article(news_article_data):
     """
