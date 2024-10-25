@@ -27,8 +27,8 @@ def fetch_news_with_upvote_details(db: Session = Depends(session_opener)):
     """
     Fetch all news articles with their upvote details.
 
-    :param db:
-    :return:
+    :param db: Database session dependency for querying news articles.
+    :return: A list of news articles with upvote count and upvoted status.
     """
     news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
     result = []
@@ -46,6 +46,10 @@ def get_user_specific_news(
 ):
     """
     Fetch news articles specific to the authenticated user.
+
+    :param db: Database session dependency for querying news articles.
+    :param user: Authenticated user dependency for user-specific data.
+    :return: A list of news articles with upvote count and the user's upvoted status.
     """
     news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
     result = []
