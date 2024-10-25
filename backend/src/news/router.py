@@ -81,7 +81,6 @@ async def search_news_articles(request: PromptRequest):
         messages=keyword_extraction_prompt,
     )
     keywords = completion.choices[0].message.content
-    # should change into simple factory pattern
     news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
     for news in news_items:
         try:
