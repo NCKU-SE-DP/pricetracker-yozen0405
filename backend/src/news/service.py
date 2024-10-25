@@ -17,9 +17,10 @@ _id_counter = itertools.count(start=1000000)
 
 def add_news_article(news_article_data):
     """
-    add new to db
-    :param news_data: news info
-    :return:
+    Adds a news article to the database.
+
+    :param news_article_data: Dictionary containing article information.
+    :return: None
     """
     session = Session()
     session.add(NewsArticle(
@@ -35,15 +36,14 @@ def add_news_article(news_article_data):
 
 def fetch_news_articles_by_keyword(search_term, is_initial=False):
     """
-    Fetches news articles based on the search keyword.
-
-    :param search_term: The search keyword.
-    :param is_initial: Boolean flag indicating whether this is the initial fetch.
+    Fetches news articles from UDN based on the provided search keyword.
+    
+    :param search_term: The keyword to search for in news articles.
+    :param is_initial: If True, fetches multiple pages of news; otherwise, fetches only the first page.
     :return: List of news articles.
     """
     all_news_data = []
     
-    # Iterate pages to get more news data
     if is_initial:
         for page in range(1, 10):
             request_params = {
@@ -53,8 +53,7 @@ def fetch_news_articles_by_keyword(search_term, is_initial=False):
                 "type": "searchword",
             }
             response = requests.get(news_config.UDN_API_URL, params=request_params)
-            all_news_data.extend(response.json()["lists"])  # Append each page's news data without re-adding
-
+            all_news_data.extend(response.json()["lists"]) 
     else:
         request_params = {
             "page": 1,
@@ -69,10 +68,10 @@ def fetch_news_articles_by_keyword(search_term, is_initial=False):
 
 def fetch_and_process_news(is_initial=False):
     """
-    get new info
+    Fetches news articles and processes them to assess relevance and generate summaries.
 
-    :param is_initial:
-    :return:
+    :param is_initial: If True, fetches multiple pages of news articles.
+    :return: None
     """
     news_articles = fetch_news_articles_by_keyword("價格", is_initial=is_initial)
 
@@ -130,6 +129,14 @@ def fetch_and_process_news(is_initial=False):
             add_news_article(detailed_news)
 
 def get_article_upvote_details(article_id, uid, db):
+    """
+    Retrieves upvote count and user-specific upvote status for an article.
+    
+    :param article_id: The ID of the news article.
+    :param uid: User ID (or None for anonymous).
+    :param db: Database session for querying.
+    :return: Tuple containing upvote count and user-specific upvote status.
+    """
     upvote_count = (
         db.query(user_news_association_table)
         .filter_by(news_articles_id=article_id)
