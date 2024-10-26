@@ -11,6 +11,6 @@ def get_necessities_prices(
         category=Query(None), commodity=Query(None)
 ):
     return requests.get(
-        pricing_settings.necessities_price_api_url,
+        pricing_settings.NECESSITIES_PRICE_API_URL,
         params={"CategoryName": category, "Name": commodity},
     ).json()
