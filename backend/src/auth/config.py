@@ -9,5 +9,6 @@ class AuthConfig(BaseSettings):
 
     SECRET_KEY: str
     ALGORITHM: str
+    AUTH_TOKEN_URL: str
 
 auth_settings = AuthConfig()
