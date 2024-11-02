@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 
 from ..database import session_opener
 from .schemas import UserAuthSchema
-from .models import User
-from .service import (
+from ..auth.models import User
+from ..auth.service import (
     validate_user_credentials,
     create_access_token,
     pwd_context,
@@ -15,10 +15,12 @@ from .service import (
 )
 
 router = APIRouter(
-    tags=["Auth"],
+    prefix="/users",
+    tags=["Users"],
+    responses={404: {"description": "Not found"}},
 )
 
-@router.post("/users/login")
+@router.post("/login")
 async def login_for_access_token(
         form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(session_opener)
 ):
@@ -35,7 +37,7 @@ async def login_for_access_token(
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/users/register")
+@router.post("/register")
 def create_user(user: UserAuthSchema, db: Session = Depends(session_opener)):
     """
     Registers a new user with a hashed password.
@@ -51,6 +53,6 @@ def create_user(user: UserAuthSchema, db: Session = Depends(session_opener)):
     db.refresh(db_user)
     return db_user
 
-@router.get("/users/me")
+@router.get("/me")
 def read_users_me(user=Depends(authenticate_user_token)):
     return {"username": user.username}

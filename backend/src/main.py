@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sentry_sdk import init as sentry_init
 from apscheduler.schedulers.background import BackgroundScheduler
-from .auth.router import router as auth_router
+from .users.router import router as user_router
 from .news.router import router as news_router
 from .pricing.router import router as pricing_router
 from .database import SessionLocal
@@ -41,6 +41,6 @@ def start_scheduler():
 def shutdown_scheduler():
     schedulers.shutdown()
 
-app.include_router(auth_router, prefix="/api/v1")
+app.include_router(user_router, prefix="/api/v1")
 app.include_router(news_router, prefix="/api/v1")
 app.include_router(pricing_router, prefix="/api/v1")
