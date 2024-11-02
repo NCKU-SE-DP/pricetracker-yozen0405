@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 
-class Settings(BaseSettings):
+class GlobalConfig(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -13,4 +13,4 @@ class Settings(BaseSettings):
     TRACES_SAMPLE_RATE: float = 1.0
     FETCH_NEWS_INTERVAL_MINUTES: int = 100
 
-settings = Settings()
+global_config = GlobalConfig()

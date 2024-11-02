@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from .config import pricing_settings
+from .config import pricing_config
 import requests
 
 router = APIRouter(
@@ -13,6 +13,6 @@ def get_necessities_prices(
         category=Query(None), commodity=Query(None)
 ):
     return requests.get(
-        pricing_settings.NECESSITIES_PRICE_API_URL,
+        pricing_config.NECESSITIES_PRICE_API_URL,
         params={"CategoryName": category, "Name": commodity},
     ).json()

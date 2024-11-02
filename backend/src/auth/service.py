@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
@@ -7,12 +6,12 @@ from jose import jwt
 from sqlalchemy.orm import Session
 
 from ..database import session_opener
-from .config import auth_settings
+from .config import auth_config
 from .models import User
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=auth_settings.AUTH_TOKEN_URL)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=auth_config.AUTH_TOKEN_URL)
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -27,7 +26,7 @@ def authenticate_user_token(
     token = Depends(oauth2_scheme),
     db = Depends(session_opener)
 ):
-    payload = jwt.decode(token, auth_settings.SECRET_KEY, algorithms=auth_settings.ALGORITHM)
+    payload = jwt.decode(token, auth_config.SECRET_KEY, algorithms=auth_config.ALGORITHM)
     return db.query(User).filter(User.username == payload.get("sub")).first()
 
 def create_access_token(user_data, expires_delta=None):
@@ -38,5 +37,5 @@ def create_access_token(user_data, expires_delta=None):
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     print(to_encode)
-    encoded_jwt = jwt.encode(to_encode, auth_settings.SECRET_KEY, algorithm=auth_settings.ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, auth_config.SECRET_KEY, algorithm=auth_config.ALGORITHM)
     return encoded_jwt

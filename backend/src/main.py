@@ -8,12 +8,12 @@ from .pricing.router import router as pricing_router
 from .database import SessionLocal
 from .news.service import fetch_and_process_news
 from .news.models import NewsArticle 
-from .config import settings
+from .config import global_config
 
 sentry_init(
-    dsn=settings.SENTRY_DSN,
-    traces_sample_rate=settings.TRACES_SAMPLE_RATE,
-    profiles_sample_rate=settings.PROFILES_SAMPLE_RATE,
+    dsn=global_config.SENTRY_DSN,
+    traces_sample_rate=global_config.TRACES_SAMPLE_RATE,
+    profiles_sample_rate=global_config.PROFILES_SAMPLE_RATE,
 )
 
 app = FastAPI()
@@ -22,7 +22,7 @@ schedulers = BackgroundScheduler()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.CORS_ALLOW_ORIGINS],
+    allow_origins=[global_config.CORS_ALLOW_ORIGINS],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,7 +34,7 @@ def start_scheduler():
     if db.query(NewsArticle).count() == 0:
         fetch_and_process_news()
     db.close()
-    schedulers.add_job(fetch_and_process_news, "interval", minutes=settings.FETCH_NEWS_INTERVAL_MINUTES)
+    schedulers.add_job(fetch_and_process_news, "interval", minutes=global_config.FETCH_NEWS_INTERVAL_MINUTES)
     schedulers.start()
 
 @app.on_event("shutdown")

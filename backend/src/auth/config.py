@@ -11,4 +11,4 @@ class AuthConfig(BaseSettings):
     ALGORITHM: str
     AUTH_TOKEN_URL: str
 
-auth_settings = AuthConfig()
+auth_config = AuthConfig()
