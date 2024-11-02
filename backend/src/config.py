@@ -7,6 +7,7 @@ class GlobalConfig(BaseSettings):
         env_prefix = "GLOBAL_"
         extra = "ignore"
 
+    API_PREFIX: str
     SENTRY_DSN: str
     CORS_ALLOW_ORIGINS: str
     PROFILES_SAMPLE_RATE: float = 1.0

@@ -41,6 +41,6 @@ def start_scheduler():
 def shutdown_scheduler():
     schedulers.shutdown()
 
-app.include_router(user_router, prefix="/api/v1")
-app.include_router(news_router, prefix="/api/v1")
-app.include_router(pricing_router, prefix="/api/v1")
+app.include_router(user_router, prefix=global_config.API_PREFIX)
+app.include_router(news_router, prefix=global_config.API_PREFIX)
+app.include_router(pricing_router, prefix=global_config.API_PREFIX)
