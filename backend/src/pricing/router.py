@@ -3,10 +3,12 @@ from .config import pricing_settings
 import requests
 
 router = APIRouter(
-    tags=["Prices"]
+    prefix="/prices",
+    tags=["Prices"],
+    responses={404: {"description": "Not found"}},
 )
 
-@router.get("/prices/necessities-price")
+@router.get("/necessities-price")
 def get_necessities_prices(
         category=Query(None), commodity=Query(None)
 ):
