@@ -8,6 +8,7 @@ class GlobalConfig(BaseSettings):
         extra = "ignore"
 
     API_PREFIX: str
+    DATABASE_URL: str
     SENTRY_DSN: str
     CORS_ALLOW_ORIGINS: str
     PROFILES_SAMPLE_RATE: float = 1.0

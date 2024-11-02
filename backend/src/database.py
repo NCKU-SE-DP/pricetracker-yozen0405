@@ -3,6 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Table, Column, Integer, ForeignKey
 
+from .config import global_config
+
 Base = declarative_base()
 
 user_news_association_table = Table(
@@ -12,7 +14,7 @@ user_news_association_table = Table(
     Column("news_articles_id", Integer, ForeignKey("news_articles.id"), primary_key=True),
 )
 
-engine = create_engine("sqlite:///news_database.db", echo=True)
+engine = create_engine(global_config.DATABASE_URL, echo=True)
 
 Base.metadata.create_all(engine)
 
