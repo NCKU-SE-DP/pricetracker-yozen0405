@@ -1,11 +1,9 @@
 import json
 import requests
 from bs4 import BeautifulSoup
-from datetime import timedelta
 from fastapi import APIRouter, Depends
 from openai import OpenAI
 from sqlalchemy.orm import Session
-from urllib.parse import quote
 
 from ..auth.service import authenticate_user_token
 from ..database import session_opener
@@ -19,10 +17,12 @@ from .service import (
 )
 
 router = APIRouter(
-    tags=["News"]
+    prefix="/news",
+    tags=["News"],
+    responses={404: {"description": "Not found"}},
 )
 
-@router.get("/news/news")
+@router.get("/news")
 def fetch_news_with_upvote_details(db: Session = Depends(session_opener)):
     """
     Fetch all news articles with their upvote details.
@@ -39,7 +39,7 @@ def fetch_news_with_upvote_details(db: Session = Depends(session_opener)):
         )
     return result
 
-@router.get("/news/user_news")
+@router.get("/user_news")
 def get_user_specific_news(
     db: Session = Depends(session_opener),
     user = Depends(authenticate_user_token)
@@ -64,7 +64,7 @@ def get_user_specific_news(
         )
     return result
 
-@router.post("/news/search_news")
+@router.post("/search_news")
 async def search_news_articles(request: PromptRequest):
     prompt = request.prompt
     news_list = []
@@ -110,7 +110,7 @@ async def search_news_articles(request: PromptRequest):
             print(e)
     return sorted(news_list, key=lambda x: x["time"], reverse=True)
 
-@router.post("/news/news_summary")
+@router.post("/news_summary")
 async def news_summary(
         payload: NewsSumaryRequestSchema, user=Depends(authenticate_user_token)
 ):
@@ -134,7 +134,7 @@ async def news_summary(
         response_data["reason"] = result["原因"]
     return response_data
 
-@router.post("/news/{article_id}/upvote")
+@router.post("/{article_id}/upvote")
 def upvote_article(
         article_id,
         db=Depends(session_opener),
