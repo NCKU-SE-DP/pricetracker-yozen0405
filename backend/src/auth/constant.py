@@ -1,2 +1,2 @@
-MaxUsernameSize = 50 
-MaxPasswordSize = 200
+MAX_USERNAME_SIZE = 50
+MAX_PASSWORD_SIZE = 200
