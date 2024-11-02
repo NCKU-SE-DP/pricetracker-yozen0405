@@ -1,15 +1,9 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Text, Table
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
-from ..database import Base
-from .constant import MAX_PASSWORD_SIZE, MAX_USERNAME_SIZE
 
-# Association table for user and news article upvotes
-user_news_association_table = Table(
-    "user_news_upvotes",
-    Base.metadata,
-    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
-    Column("news_articles_id", Integer, ForeignKey("news_articles.id"), primary_key=True),
-)
+from ..database import Base
+from ..database import user_news_association_table
+from .constant import MAX_PASSWORD_SIZE, MAX_USERNAME_SIZE
 
 class User(Base):
     __tablename__ = "users"
