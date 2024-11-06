@@ -12,8 +12,7 @@ from .config import news_config
 from ..ai_service.service import relevance_check, generate_summary
 from .utils import process_news_item, parse_summary_result
 
-# Unique ID counter for assigning article IDs in memory. 
-# Used for generating IDs when adding new articles to the database.
+# Unique ID counter for generating temporary article IDs in memory.
 article_id_counter = itertools.count(start=1000000)
 
 def add_news_article(news_article_data):
