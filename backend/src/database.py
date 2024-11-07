@@ -18,11 +18,10 @@ engine = create_engine(global_config.DATABASE_URL, echo=True)
 
 Base.metadata.create_all(engine)
 
-Session = sessionmaker(bind=engine)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def session_opener():
-    session = Session(bind=engine)
+    session = SessionLocal(bind=engine)
     try:
         yield session
     finally:

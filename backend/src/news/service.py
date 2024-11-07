@@ -1,11 +1,10 @@
 import itertools
 import requests
 from urllib.parse import quote
-import json
 from sqlalchemy.orm import Session
 from sqlalchemy import select, insert, delete
 
-from ..database import Session
+from ..database import SessionLocal
 from .models import NewsArticle
 from ..auth.models import user_news_association_table
 from .config import news_config
@@ -22,7 +21,7 @@ def add_news_article(news_article_data):
     :param news_article_data: Dictionary containing article information.
     :return: None
     """
-    session = Session()
+    session = SessionLocal()
     session.add(NewsArticle(
         url=news_article_data["url"],
         title=news_article_data["title"],
