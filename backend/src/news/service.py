@@ -1,0 +1,151 @@
+import itertools
+import requests
+from urllib.parse import quote
+import json
+from sqlalchemy.orm import Session
+from sqlalchemy import select, insert, delete
+
+from ..database import Session
+from .models import NewsArticle
+from ..auth.models import user_news_association_table
+from .config import news_config
+from ..ai_service.service import relevance_check, generate_summary
+from .utils import process_news_item, parse_summary_result
+
+# Unique ID counter for generating temporary article IDs in memory.
+article_id_counter = itertools.count(start=1000000)
+
+def add_news_article(news_article_data):
+    """
+    Adds a news article to the database.
+
+    :param news_article_data: Dictionary containing article information.
+    :return: None
+    """
+    session = Session()
+    session.add(NewsArticle(
+        url=news_article_data["url"],
+        title=news_article_data["title"],
+        time=news_article_data["time"],
+        content=" ".join(news_article_data["content"]),  # 將內容list轉換為字串
+        summary=news_article_data["summary"],
+        reason=news_article_data["reason"],
+    ))
+    session.commit()
+    session.close()
+
+def fetch_news_articles_by_keyword(search_term, is_initial=False):
+    """
+    Fetches news articles from UDN based on the provided search keyword.
+    
+    :param search_term: The keyword to search for in news articles.
+    :param is_initial: If True, fetches multiple pages of news; otherwise, fetches only the first page.
+    :return: List of news articles.
+    """
+    all_news_data = []
+    
+    if is_initial:
+        for page in range(1, 10):
+            request_params = {
+                "page": page,
+                "id": f"search:{quote(search_term)}",
+                "channelId": 2,
+                "type": "searchword",
+            }
+            response = requests.get(news_config.UDN_API_URL, params=request_params)
+            all_news_data.extend(response.json()["lists"]) 
+    else:
+        request_params = {
+            "page": 1,
+            "id": f"search:{quote(search_term)}",
+            "channelId": 2,
+            "type": "searchword",
+        }
+        response = requests.get(news_config.UDN_API_URL, params=request_params)
+        all_news_data = response.json()["lists"]
+
+    return all_news_data
+
+def fetch_and_process_news(is_initial=False):
+    """
+    Fetches news articles and processes them to assess relevance and generate summaries.
+
+    :param is_initial: If True, fetches multiple pages of news articles.
+    :return: None
+    """
+    news_articles = fetch_news_articles_by_keyword("價格", is_initial=is_initial)
+
+    # Iterate through each news article
+    for article in news_articles:
+        article_title = article["title"]
+        relevance = relevance_check(article_title)
+        if relevance == "high":
+            detailed_news = process_news_item(article)
+            summary_result = generate_summary(" ".join(detailed_news["content"]))
+            detailed_news = parse_summary_result(summary_result)
+            add_news_article(detailed_news)
+
+def get_article_upvote_details(article_id, uid, db):
+    """
+    Retrieves upvote count and user-specific upvote status for an article.
+    
+    :param article_id: The ID of the news article.
+    :param uid: User ID (or None for anonymous).
+    :param db: Database session for querying.
+    :return: Tuple containing upvote count and user-specific upvote status.
+    """
+    upvote_count = (
+        db.query(user_news_association_table)
+        .filter_by(news_articles_id=article_id)
+        .count()
+    )
+
+    has_voted = False
+    if uid:
+        has_voted = (
+            db.query(user_news_association_table)
+            .filter_by(news_articles_id=article_id, user_id=uid)
+            .first() is not None
+        )
+
+    return upvote_count, has_voted
+
+def toggle_upvote(article_id, uid, db_session):
+    """
+    Toggles the upvote status for a specific article by a user.
+
+    :param article_id: The ID of the news article.
+    :param user_id: The ID of the user.
+    :param db_session: The database session for executing queries.
+    :return: A message indicating whether the upvote was added or removed.
+    """
+    # Check if the user has already upvoted the article
+    existing_upvote = db_session.execute(
+        select(user_news_association_table).where(
+            user_news_association_table.c.news_articles_id == article_id,
+            user_news_association_table.c.user_id == uid,
+        )
+    ).scalar()
+
+    # If upvote exists, remove it
+    if existing_upvote:
+        delete_stmt = delete(user_news_association_table).where(
+            user_news_association_table.c.news_articles_id == article_id,
+            user_news_association_table.c.user_id == uid,
+        )
+        db_session.execute(delete_stmt)
+        db_session.commit()
+        return "Upvote removed"
+
+    # Otherwise, add a new upvote
+    else:
+        insert_stmt = insert(user_news_association_table).values(
+            news_articles_id=article_id, user_id=uid
+        )
+        db_session.execute(insert_stmt)
+        db_session.commit()
+        return "Article upvoted"
+
+def news_exists(article_id, db: Session):
+    return db.query(NewsArticle).filter_by(id=article_id).first() is not None
+
