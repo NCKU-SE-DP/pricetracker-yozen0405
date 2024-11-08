@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..auth.service import authenticate_user_token
-from ..database import session_opener
+from ..dependencies import session_opener
 from .models import NewsArticle
 from .schemas import PromptRequest, NewsSumaryRequestSchema
 from ..ai_service.service import generate_summary, extract_search_keywords

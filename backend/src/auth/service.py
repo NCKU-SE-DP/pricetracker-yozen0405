@@ -5,7 +5,7 @@ from jose import jwt
 
 from sqlalchemy.orm import Session
 
-from ..database import session_opener
+from ..dependencies import session_opener
 from .config import auth_config
 from ..users.models import User
 from passlib.context import CryptContext

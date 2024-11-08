@@ -8,7 +8,8 @@ from unittest.mock import Mock
 
 from src.main import app
 from src.users.models import User
-from src.database import Base, session_opener
+from src.database import Base
+from src.dependencies import session_opener
 from src.news.models import NewsArticle
 from src.database import user_news_association_table
 from src.news.schemas import NewsSumaryRequestSchema, PromptRequest

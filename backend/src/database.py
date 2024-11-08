@@ -12,9 +12,3 @@ Base.metadata.create_all(engine)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def session_opener():
-    session = SessionLocal(bind=engine)
-    try:
-        yield session
-    finally:
-        session.close()

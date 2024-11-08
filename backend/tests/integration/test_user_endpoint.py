@@ -6,7 +6,8 @@ from jose import jwt
 
 from src.main import app
 from src.users.models import User
-from src.database import Base, session_opener
+from src.database import Base
+from src.dependencies import session_opener
 from src.auth.service import pwd_context
 
 SECRET_KEY = "1892dhianiandowqd0n"

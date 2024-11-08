@@ -1,4 +1,5 @@
 from sqlalchemy import Table, Column, Integer, ForeignKey
+from ..database import Base
 
 user_news_association_table = Table(
     "user_news_upvotes",
