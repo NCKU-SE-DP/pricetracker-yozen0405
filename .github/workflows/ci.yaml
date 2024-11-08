@@ -56,12 +56,13 @@ jobs:
         run: |
           cd backend
           pytest tests/integration --cov=src --cov-report=xml --disable-warnings
+          ls -la
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v3
         with:
           name: coverage-report
-          path: coverage.xml
+          path: backend/coverage.xml
 
   # lint:
   #   runs-on: ubuntu-latest
