@@ -11,7 +11,7 @@ from src.users.models import User
 from src.database import Base
 from src.dependencies import session_opener
 from src.news.models import NewsArticle
-from src.database import user_news_association_table
+from src.models import user_news_association_table
 from src.news.schemas import NewsSumaryRequestSchema, PromptRequest
 from src.auth.service import pwd_context
 
