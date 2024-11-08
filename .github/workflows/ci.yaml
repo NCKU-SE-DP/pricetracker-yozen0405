@@ -40,6 +40,8 @@ jobs:
       - name: Run integration tests (with mock DB)
         env:
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
+          JWT_AUTH_TOKEN_URL: ${{ secrets.JWT_AUTH_TOKEN_URL }}
           PRICING_NECESSITIES_PRICE_API_URL: ${{ secrets.PRICING_NECESSITIES_PRICE_API_URL }}
           NEWS_UDN_API_URL: ${{ secrets.NEWS_UDN_API_URL }}
           GLOBAL_SENTRY_DSN: ${{ secrets.GLOBAL_SENTRY_DSN }}
