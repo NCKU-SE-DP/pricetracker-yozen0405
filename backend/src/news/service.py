@@ -6,7 +6,7 @@ from sqlalchemy import select, insert, delete
 
 from ..database import SessionLocal
 from .models import NewsArticle
-from ..auth.models import user_news_association_table
+from ..users.models import user_news_association_table
 from .config import news_config
 from ..ai_service.service import relevance_check, generate_summary
 from .utils import process_news_item, parse_summary_result

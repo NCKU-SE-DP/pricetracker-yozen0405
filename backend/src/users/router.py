@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..database import session_opener
 from .schemas import UserAuthSchema
-from ..auth.models import User
+from .models import User
 from .config import user_config
 from ..auth.service import (
     validate_user_credentials,
