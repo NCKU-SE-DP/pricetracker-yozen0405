@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..database import session_opener
 from .schemas import UserAuthSchema
 from ..auth.models import User
+from .config import user_config
 from ..auth.service import (
     validate_user_credentials,
     create_access_token,
@@ -33,7 +34,7 @@ async def login_for_access_token(
     """
     user = validate_user_credentials(db, form_data.username, form_data.password)
     access_token = create_access_token(
-        user_data={"sub": str(user.username)}, expires_delta=timedelta(minutes=30)
+        user_data={"sub": str(user.username)}, expires_delta=timedelta(minutes=user_config.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return {"access_token": access_token, "token_type": "bearer"}
 

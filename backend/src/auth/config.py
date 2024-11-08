@@ -10,6 +10,6 @@ class AuthConfig(BaseSettings):
     SECRET_KEY: str
     ALGORITHM: str
     AUTH_TOKEN_URL: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int
+    DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES: int
 
 auth_config = AuthConfig()
