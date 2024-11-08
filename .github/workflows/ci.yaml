@@ -39,7 +39,18 @@ jobs:
 
       - name: Run integration tests (with mock DB)
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          PRICING_NECESSITIES_PRICE_API_URL: ${{ secrets.PRICING_NECESSITIES_PRICE_API_URL }}
+          NEWS_UDN_API_URL: ${{ secrets.NEWS_UDN_API_URL }}
+          GLOBAL_SENTRY_DSN: ${{ secrets.GLOBAL_SENTRY_DSN }}
+          GLOBAL_API_PREFIX: ${{ secrets.GLOBAL_API_PREFIX }}
+          GLOBAL_DATABASE_URL: ${{ secrets.GLOBAL_DATABASE_URL }}
+          GLOBAL_CORS_ALLOW_ORIGINS: ${{ secrets.GLOBAL_CORS_ALLOW_ORIGINS }}
+          GLOBAL_PROFILES_SAMPLE_RATE: ${{ secrets.GLOBAL_PROFILES_SAMPLE_RATE }}
+          GLOBAL_TRACES_SAMPLE_RATE: ${{ secrets.GLOBAL_TRACES_SAMPLE_RATE }}
+          GLOBAL_FETCH_NEWS_INTERVAL_MINUTES: ${{ secrets.GLOBAL_FETCH_NEWS_INTERVAL_MINUTES }}
+          AI_OPEN_AI_KEY: ${{ secrets.AI_OPEN_AI_KEY }}
+          AI_OPEN_AI_MODEL: ${{ secrets.AI_OPEN_AI_MODEL }}
         run: |
           cd backend
           pytest tests/integration --cov=src --cov-report=xml --disable-warnings
