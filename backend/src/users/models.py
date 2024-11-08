@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
 from ..database import Base
-from ..database import user_news_association_table
+from ..models import user_news_association_table
 from ..auth.constant import MAX_PASSWORD_SIZE, MAX_USERNAME_SIZE
 
 class User(Base):

@@ -7,7 +7,7 @@ from jose import jwt
 from unittest.mock import Mock
 
 from src.main import app
-from backend.src.users.models import User
+from src.users.models import User
 from src.database import Base, session_opener
 from src.news.models import NewsArticle
 from src.database import user_news_association_table
