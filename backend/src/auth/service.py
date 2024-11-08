@@ -5,7 +5,6 @@ from jose import jwt
 
 from sqlalchemy.orm import Session
 
-from ..dependencies import session_opener
 from .config import auth_config
 from ..users.models import User
 from passlib.context import CryptContext
@@ -21,13 +20,6 @@ def validate_user_credentials(db_session: Session, username: str, password: str)
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
-
-def authenticate_user_token(
-    token = Depends(oauth2_scheme),
-    db = Depends(session_opener)
-):
-    payload = jwt.decode(token, auth_config.SECRET_KEY, algorithms=auth_config.ALGORITHM)
-    return db.query(User).filter(User.username == payload.get("sub")).first()
 
 def create_access_token(user_data, expires_delta=None):
     to_encode = user_data.copy()
