@@ -4,14 +4,14 @@ from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from ..database import session_opener
+from ..dependencies import session_opener, get_current_user
 from .schemas import UserAuthSchema
-from ..auth.models import User
+from .models import User
+from .config import user_config
 from ..auth.service import (
     validate_user_credentials,
     create_access_token,
-    pwd_context,
-    authenticate_user_token
+    pwd_context
 )
 
 router = APIRouter(
@@ -33,7 +33,7 @@ async def login_for_access_token(
     """
     user = validate_user_credentials(db, form_data.username, form_data.password)
     access_token = create_access_token(
-        user_data={"sub": str(user.username)}, expires_delta=timedelta(minutes=30)
+        user_data={"sub": str(user.username)}, expires_delta=timedelta(minutes=user_config.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -54,5 +54,5 @@ def create_user(user: UserAuthSchema, db: Session = Depends(session_opener)):
     return db_user
 
 @router.get("/me")
-def read_users_me(user=Depends(authenticate_user_token)):
+def read_users_me(user=Depends(get_current_user)):
     return {"username": user.username}

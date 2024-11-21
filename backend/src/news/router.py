@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from ..auth.service import authenticate_user_token
-from ..database import session_opener
+from ..dependencies import session_opener, get_current_user
 from .models import NewsArticle
 from .schemas import PromptRequest, NewsSumaryRequestSchema
 from ..ai_service.service import generate_summary, extract_search_keywords
@@ -40,7 +39,7 @@ def fetch_news_with_upvote_details(db: Session = Depends(session_opener)):
 @router.get("/user_news")
 def get_user_specific_news(
     db: Session = Depends(session_opener),
-    user = Depends(authenticate_user_token)
+    user = Depends(get_current_user)
 ):
     """
     Fetch news articles specific to the authenticated user.
@@ -80,7 +79,7 @@ async def search_news_articles(request: PromptRequest):
 
 @router.post("/news_summary")
 async def news_summary(
-        payload: NewsSumaryRequestSchema, user=Depends(authenticate_user_token)
+        payload: NewsSumaryRequestSchema, user=Depends(get_current_user)
 ):
     result = generate_summary(payload.content)
     return parse_summary_result(result)
@@ -89,7 +88,7 @@ async def news_summary(
 def upvote_article(
         article_id,
         db=Depends(session_opener),
-        user=Depends(authenticate_user_token),
+        user=Depends(get_current_user),
 ):
     message = toggle_upvote(article_id, user.id, db)
     return {"message": message}
