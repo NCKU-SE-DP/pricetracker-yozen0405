@@ -5,13 +5,13 @@ from ..dependencies import session_opener, get_current_user
 from .models import NewsArticle
 from .schemas import PromptRequest, NewsSumaryRequestSchema
 from ..ai_service.service import generate_summary, extract_search_keywords
+from .utils import fetch_news_articles_by_keyword
 from .service import (
     article_id_counter,
-    fetch_news_articles_by_keyword,
     get_article_upvote_details,
     toggle_upvote,
 )
-from .utils import process_news_item, parse_summary_result
+from .utils import process_news_item, parse_summary_result, convert_news_to_dict
 
 router = APIRouter(
     prefix="/news",
@@ -69,8 +69,7 @@ async def search_news_articles(request: PromptRequest):
     news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
     for news in news_items:
         try:
-            detailed_news = process_news_item(news)
-            detailed_news["content"] = " ".join(detailed_news["content"])
+            detailed_news = convert_news_to_dict(process_news_item(news))
             detailed_news["id"] = next(article_id_counter)
             news_list.append(detailed_news)
         except Exception as e:

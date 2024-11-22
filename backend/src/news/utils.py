@@ -1,32 +1,51 @@
 from bs4 import BeautifulSoup
 import requests
 import json
+
+from ..database import SessionLocal
+from ..crawler.udn_crawler import UDNCrawler
+
+crawler = UDNCrawler()
     
+def convert_news_to_dict(news):
+    return {
+        "url": news.url,
+        "title": news.title,
+        "time": news.time,
+        "content": news.content,
+    }
+
 def process_news_item(news):
     """
     Fetches detailed content from a news article.
     """
-    response = requests.get(news["titleLink"])
-    soup = BeautifulSoup(response.text, "html.parser")
-    # 標題
-    title = soup.find("h1", class_="article-content__title").text
-    time = soup.find("time", class_="article-content__time").text
-    # 定位到包含文章内容的 <section>
-    content_section = soup.find("section", class_="article-content__editor")
+    return crawler.parse(news.url)
 
-    paragraphs = [
-        p.text
-        for p in content_section.find_all("p")
-        if p.text.strip() != "" and "▪" not in p.text
-    ]
-    detailed_news = {
-        "url": news["titleLink"],
-        "title": title,
-        "time": time,
-        "content": paragraphs,
-    }
+def add_news_article(news_article_data):
+    """
+    Adds a news article to the database.
 
-    return detailed_news
+    :param news_article_data: Dictionary containing article information.
+    :return: None
+    """
+    session = SessionLocal()
+    crawler.save(news=news_article_data, db=session)
+
+def fetch_news_articles_by_keyword(search_term, is_initial=False):
+    """
+    Fetches news articles from UDN based on the provided search keyword.
+    
+    :param search_term: The keyword to search for in news articles.
+    :param is_initial: If True, fetches multiple pages of news; otherwise, fetches only the first page.
+    :return: List of news articles.
+    """
+    if is_initial:
+        return crawler.startup(search_term=search_term)
+    else:
+        return crawler.get_headline(search_term=search_term, page=1)
+    
+def add_news_summary(news, summary_result):
+    return crawler.add_news_summary(news=news, summary_result=summary_result)
 
 def parse_summary_result(result):
     """
