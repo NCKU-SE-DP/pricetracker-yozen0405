@@ -138,4 +138,10 @@ class NewsCrawlerBase(metaclass=abc.ABCMeta):
 
         if url_domain == main_domain:
             return True
+        # 判斷 self 是否有 news_website_news_child_urls
+        if hasattr(self, 'news_website_news_child_urls') and isinstance(self.news_website_news_child_urls, list): 
+            for child_url in self.news_website_news_child_urls:
+                if url.startswith(child_url):
+                    return True
+
         return False

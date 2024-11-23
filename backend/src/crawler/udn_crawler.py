@@ -35,12 +35,14 @@ UDNCrawler Methods:
 from requests import Response
 from bs4 import BeautifulSoup
 from urllib.parse import quote
+from requests.exceptions import RequestException
 import requests
 import json
 from sqlalchemy.orm import Session
 
 from .crawler_base import NewsCrawlerBase, Headline, News, NewsWithSummary
 from ..news.models import NewsArticle
+from .exceptions import DomainMismatchException
 
 class UDNCrawler(NewsCrawlerBase):
     CHANNEL_ID = 2
@@ -91,8 +93,13 @@ class UDNCrawler(NewsCrawlerBase):
         }
 
     def _perform_request(self, url: str | None = None, params: dict | None = None) -> Response:
-        return requests.get(url, params=params)
-
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            return response
+        except RequestException as e:
+            raise RuntimeError(f"Failed to perform request to {url}: {e}")
+        
     @staticmethod
     def _parse_headlines(response: Response) -> list[Headline]:
         try:
