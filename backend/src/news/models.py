@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 
 from ..database import Base
 from ..models import user_news_association_table
+from ..users.models import User
 
 class NewsArticle(Base):
     __tablename__ = "news_articles"

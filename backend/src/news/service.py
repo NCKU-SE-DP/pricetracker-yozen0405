@@ -1,69 +1,19 @@
 import itertools
-import requests
-from urllib.parse import quote
 from sqlalchemy.orm import Session
 from sqlalchemy import select, insert, delete
 
-from ..database import SessionLocal
 from .models import NewsArticle
 from ..users.models import user_news_association_table
-from .config import news_config
 from ..ai_service.service import relevance_check, generate_summary
-from .utils import process_news_item, parse_summary_result
+from .utils import (
+    process_news_item,
+    fetch_news_articles_by_keyword, 
+    add_news_article,
+    add_news_summary
+)
 
 # Unique ID counter for generating temporary article IDs in memory.
 article_id_counter = itertools.count(start=1000000)
-
-def add_news_article(news_article_data):
-    """
-    Adds a news article to the database.
-
-    :param news_article_data: Dictionary containing article information.
-    :return: None
-    """
-    session = SessionLocal()
-    session.add(NewsArticle(
-        url=news_article_data["url"],
-        title=news_article_data["title"],
-        time=news_article_data["time"],
-        content=" ".join(news_article_data["content"]),  # 將內容list轉換為字串
-        summary=news_article_data["summary"],
-        reason=news_article_data["reason"],
-    ))
-    session.commit()
-    session.close()
-
-def fetch_news_articles_by_keyword(search_term, is_initial=False):
-    """
-    Fetches news articles from UDN based on the provided search keyword.
-    
-    :param search_term: The keyword to search for in news articles.
-    :param is_initial: If True, fetches multiple pages of news; otherwise, fetches only the first page.
-    :return: List of news articles.
-    """
-    all_news_data = []
-    
-    if is_initial:
-        for page in range(1, 10):
-            request_params = {
-                "page": page,
-                "id": f"search:{quote(search_term)}",
-                "channelId": 2,
-                "type": "searchword",
-            }
-            response = requests.get(news_config.UDN_API_URL, params=request_params)
-            all_news_data.extend(response.json()["lists"]) 
-    else:
-        request_params = {
-            "page": 1,
-            "id": f"search:{quote(search_term)}",
-            "channelId": 2,
-            "type": "searchword",
-        }
-        response = requests.get(news_config.UDN_API_URL, params=request_params)
-        all_news_data = response.json()["lists"]
-
-    return all_news_data
 
 def fetch_and_process_news(is_initial=False):
     """
@@ -76,12 +26,12 @@ def fetch_and_process_news(is_initial=False):
 
     # Iterate through each news article
     for article in news_articles:
-        article_title = article["title"]
+        article_title = article.title
         relevance = relevance_check(article_title)
         if relevance == "high":
             detailed_news = process_news_item(article)
-            summary_result = generate_summary(" ".join(detailed_news["content"]))
-            detailed_news = parse_summary_result(summary_result)
+            summary_result = generate_summary(detailed_news.content)
+            detailed_news = add_news_summary(detailed_news, summary_result)
             add_news_article(detailed_news)
 
 def get_article_upvote_details(article_id, uid, db):
