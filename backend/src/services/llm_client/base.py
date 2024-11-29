@@ -1,8 +1,11 @@
 import abc
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
+from typing import List
 
 class MessageInterface(BaseModel):
+    """
+    Represents the structure of a message sent to or received from the LLM API.
+    """
     role: str = Field(
         default=...,
         example="system",
@@ -16,18 +19,23 @@ class MessageInterface(BaseModel):
     
 
 class LLMClientBase(metaclass=abc.ABCMeta):
+    """
+    Abstract base class defining the interface for an LLM client.
+    Subclasses must implement methods to evaluate text relevance, generate summaries, 
+    extract keywords, and interact with the underlying LLM API.
+    """
     _api_key = str
     _model = str
     
     @abc.abstractmethod
     def evaluate_relevance(self, text: str) -> str:
         """
-        Evaluate the relevance of the provided text to a specific context.
+        Evaluates the relevance of the provided text to a specific context.
 
-        :param text: A string containing the text to be evaluated.
+        :param text: The input text to evaluate.
         :type text: str
 
-        :return: A string indicating the relevance level: 'high', 'medium', or 'low'.
+        :return: The relevance level, which can be 'high', 'medium', or 'low'.
         :rtype: str
         """
         pass
@@ -35,24 +43,22 @@ class LLMClientBase(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def generate_summary(self, text: str) -> str:
         """
-        Generate a summary of the provided text, including its impact and reasons.
+        Generates a summary for the provided text, including its impact and reasons.
 
-        :param text: A string containing the content to summarize.
+        :param text: The input text to summarize.
         :type text: str
 
-        :return: A dictionary with two keys:
-                 - 'impact': A string describing the impact.
-                 - 'reason': A string explaining the reasons.
-        :rtype: Dict[str, str]
+        :return: A JSON-formatted string containing the impact and reason.
+        :rtype: str
         """
         pass
 
     @abc.abstractmethod
     def extract_search_keywords(self, text: str) -> str:
         """
-        Extract search keywords from the provided text.
+        Extracts the most relevant search keywords from the input text.
 
-        :param text: A string containing the input text from which keywords are to be extracted.
+        :param text: The input text from which keywords are extracted.
         :type text: str
 
         :return: A string of space-separated keywords extracted from the input text.
@@ -63,13 +69,12 @@ class LLMClientBase(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _generate_text(self, messages: List[MessageInterface]) -> str:
         """
-        Interact with the underlying LLM API to generate a text response.
+        Interacts with the underlying LLM API to generate a response based on the provided messages.
 
-        :param messages: A list of dictionaries, where each dictionary represents a message
-                         with keys 'role' (e.g., 'system', 'user') and 'content' (the text message).
-        :type messages: List[Dict[str, Any]]
+        :param messages: A list of MessageInterface instances representing the conversation context.
+        :type messages: List[MessageInterface]
 
-        :return: A string containing the generated response from the LLM API.
+        :return: The generated text response from the LLM API.
         :rtype: str
         """
         pass
