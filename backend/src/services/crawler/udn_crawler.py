@@ -43,12 +43,13 @@ from sqlalchemy.orm import Session
 from .crawler_base import NewsCrawlerBase, Headline, News, NewsWithSummary
 from src.news.models import NewsArticle
 from .exceptions import DomainMismatchException
+from .config import crawler_config
 
 class UDNCrawler(NewsCrawlerBase):
     CHANNEL_ID = 2
 
     def __init__(self, timeout: int = 5) -> None:
-        self.news_website_url = "https://udn.com/api/more"
+        self.news_website_url = crawler_config.UDN_API_URL
         self.timeout = timeout
 
     def startup(self, search_term: str) -> list[Headline]:

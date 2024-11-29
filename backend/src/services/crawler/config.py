@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 
-class NewsConfig(BaseSettings):
+class CrawlerConfig(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -9,4 +9,4 @@ class NewsConfig(BaseSettings):
     
     UDN_API_URL: str
 
-news_config = NewsConfig()
+crawler_config = CrawlerConfig()
