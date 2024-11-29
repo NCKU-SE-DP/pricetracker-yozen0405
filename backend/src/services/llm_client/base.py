@@ -33,7 +33,7 @@ class LLMClientBase(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def generate_summary(self, text: str) -> Dict[str, str]:
+    def generate_summary(self, text: str) -> str:
         """
         Generate a summary of the provided text, including its impact and reasons.
 
@@ -61,7 +61,7 @@ class LLMClientBase(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def _generate_text(self, messages: List[Dict[str, Any]]) -> str:
+    def _generate_text(self, messages: List[MessageInterface]) -> str:
         """
         Interact with the underlying LLM API to generate a text response.
 

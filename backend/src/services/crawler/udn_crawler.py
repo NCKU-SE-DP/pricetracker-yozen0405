@@ -41,7 +41,7 @@ import json
 from sqlalchemy.orm import Session
 
 from .crawler_base import NewsCrawlerBase, Headline, News, NewsWithSummary
-from ..news.models import NewsArticle
+from src.news.models import NewsArticle
 from .exceptions import DomainMismatchException
 
 class UDNCrawler(NewsCrawlerBase):

@@ -3,7 +3,7 @@ import requests
 import json
 
 from ..database import SessionLocal
-from ..crawler.udn_crawler import UDNCrawler
+from src.services.crawler.udn_crawler import UDNCrawler
 
 crawler = UDNCrawler()
     
