@@ -1,16 +1,15 @@
 from .base import LLMClientBase
 from .base import MessageInterface
 from .openai_client_prompt import PromptTemplate
+from .config import ai_config
 
 from typing import Any, Dict, List
-import openai
-import os
-import json
+from openai import OpenAI
 
 class OpenAIClient(LLMClientBase):
-    def __init__(self, _api_key: str, _model: str = None) -> None:
-        self._api_key = _api_key
-        self._model = _model or os.getenv("AI_OPEN_AI_MODEL")
+    def __init__(self, _api_key: str = None, _model: str = None) -> None:
+        self._api_key = _api_key or ai_config.OPEN_AI_KEY
+        self._model = _model or ai_config.OPEN_AI_MODEL
 
     def generate_summary(self, text: str) -> str: 
         messages = self._generate_messages(prompt=PromptTemplate.summary(), text=text)
@@ -38,10 +37,10 @@ class OpenAIClient(LLMClientBase):
     def _generate_text(self, messages: List[MessageInterface]) -> str:
         formatted_messages = [message.dict() for message in messages]
         try:
-            response = openai(api_key=self._api_key).ChatCompletion.create(
+            completion = OpenAI(api_key=self._api_key).chat.completions.create(
                 model=self._model,
                 messages=formatted_messages
             )
-            return response["choices"][0]["message"]["content"]
+            return completion.choices[0].message.content
         except Exception as e:
             raise RuntimeError(f"Failed to call OpenAI API: {str(e)}")

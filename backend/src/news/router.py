@@ -4,14 +4,18 @@ from sqlalchemy.orm import Session
 from ..dependencies import session_opener, get_current_user
 from .models import NewsArticle
 from .schemas import PromptRequest, NewsSumaryRequestSchema
-from ..ai_service.service import generate_summary, extract_search_keywords
-from .utils import fetch_news_articles_by_keyword
 from .service import (
     article_id_counter,
     get_article_upvote_details,
     toggle_upvote,
 )
-from .utils import process_news_item, parse_summary_result, convert_news_to_dict
+from .utils import (
+    fetch_news_articles_by_keyword,
+    process_news_item,
+    parse_summary_result, 
+    convert_news_to_dict,
+    openai_client
+)
 
 router = APIRouter(
     prefix="/news",
@@ -65,7 +69,7 @@ def get_user_specific_news(
 async def search_news_articles(request: PromptRequest):
     prompt = request.prompt
     news_list = []
-    keywords = extract_search_keywords(prompt)
+    keywords = openai_client.extract_search_keywords(prompt)
     news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
     for news in news_items:
         try:
@@ -80,7 +84,7 @@ async def search_news_articles(request: PromptRequest):
 async def news_summary(
         payload: NewsSumaryRequestSchema, user=Depends(get_current_user)
 ):
-    result = generate_summary(payload.content)
+    result = openai_client.generate_summary(payload.content)
     return parse_summary_result(result)
 
 @router.post("/{article_id}/upvote")
