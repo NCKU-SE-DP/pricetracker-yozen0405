@@ -3,7 +3,6 @@ from .base import MessageInterface
 from .openai_client_prompt import PromptTemplate
 from .config import ai_config
 
-from typing import Any, Dict, List
 from openai import OpenAI
 
 class OpenAIClient(LLMClientBase):
@@ -28,14 +27,11 @@ class OpenAIClient(LLMClientBase):
         return self._generate_text(messages=messages)
     
     @staticmethod
-    def _generate_messages(prompt: str, text: str) -> List[MessageInterface]:
-        return [
-            MessageInterface(role="system", content=prompt),
-            MessageInterface(role="user", content=text)
-        ]
+    def _generate_messages(prompt: str, text: str) -> MessageInterface:
+        return MessageInterface(system_content=prompt, user_content=text)
 
-    def _generate_text(self, messages: List[MessageInterface]) -> str:
-        formatted_messages = [message.dict() for message in messages]
+    def _generate_text(self, messages: MessageInterface) -> str:
+        formatted_messages = messages.to_dict
         try:
             completion = OpenAI(api_key=self._api_key).chat.completions.create(
                 model=self._model,
