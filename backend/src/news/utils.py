@@ -2,10 +2,11 @@ import json
 
 from ..database import SessionLocal
 from src.services.crawler.udn_crawler import UDNCrawler
-from src.services.llm_client.openai_client import OpenAIClient
+from src.services.llm_client.client import OpenAIClient
+from src.news.config import news_config
 
 crawler = UDNCrawler()
-openai_client = OpenAIClient()
+openai_client = OpenAIClient(api_key=news_config.OPEN_AI_KEY)
 
 def convert_news_to_dict(news):
     return {
