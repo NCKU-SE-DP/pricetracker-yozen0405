@@ -56,21 +56,21 @@ jobs:
       - name: Run integration tests (with mock DB)
         env:
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-            JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
-            JWT_AUTH_TOKEN_URL: ${{ secrets.JWT_AUTH_TOKEN_URL }}
-            JWT_DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.JWT_DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES }}
-            PRICING_NECESSITIES_PRICE_API_URL: ${{ secrets.PRICING_NECESSITIES_PRICE_API_URL }}
-            USER_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.USER_ACCESS_TOKEN_EXPIRE_MINUTES }}
-            CRAWLER_UDN_API_URL: ${{ secrets.CRAWLER_UDN_API_URL }}
-            GLOBAL_SENTRY_DSN: ${{ secrets.GLOBAL_SENTRY_DSN }}
-            GLOBAL_API_PREFIX: ${{ secrets.GLOBAL_API_PREFIX }}
-            GLOBAL_DATABASE_URL: ${{ secrets.GLOBAL_DATABASE_URL }}
-            GLOBAL_CORS_ALLOW_ORIGINS: ${{ secrets.GLOBAL_CORS_ALLOW_ORIGINS }}
-            GLOBAL_PROFILES_SAMPLE_RATE: ${{ secrets.GLOBAL_PROFILES_SAMPLE_RATE }}
-            GLOBAL_TRACES_SAMPLE_RATE: ${{ secrets.GLOBAL_TRACES_SAMPLE_RATE }}
-            GLOBAL_FETCH_NEWS_INTERVAL_MINUTES: ${{ secrets.GLOBAL_FETCH_NEWS_INTERVAL_MINUTES }}
-            NEWS_ANTROPIC_AI_KEY: ${{ secrets.NEWS_ANTROPIC_AI_KEY }}
-            NEWS_OPEN_AI_KEY: ${{ secrets.NEWS_OPEN_AI_KEY }}
+          JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
+          JWT_AUTH_TOKEN_URL: ${{ secrets.JWT_AUTH_TOKEN_URL }}
+          JWT_DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.JWT_DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES }}
+          PRICING_NECESSITIES_PRICE_API_URL: ${{ secrets.PRICING_NECESSITIES_PRICE_API_URL }}
+          USER_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.USER_ACCESS_TOKEN_EXPIRE_MINUTES }}
+          CRAWLER_UDN_API_URL: ${{ secrets.CRAWLER_UDN_API_URL }}
+          GLOBAL_SENTRY_DSN: ${{ secrets.GLOBAL_SENTRY_DSN }}
+          GLOBAL_API_PREFIX: ${{ secrets.GLOBAL_API_PREFIX }}
+          GLOBAL_DATABASE_URL: ${{ secrets.GLOBAL_DATABASE_URL }}
+          GLOBAL_CORS_ALLOW_ORIGINS: ${{ secrets.GLOBAL_CORS_ALLOW_ORIGINS }}
+          GLOBAL_PROFILES_SAMPLE_RATE: ${{ secrets.GLOBAL_PROFILES_SAMPLE_RATE }}
+          GLOBAL_TRACES_SAMPLE_RATE: ${{ secrets.GLOBAL_TRACES_SAMPLE_RATE }}
+          GLOBAL_FETCH_NEWS_INTERVAL_MINUTES: ${{ secrets.GLOBAL_FETCH_NEWS_INTERVAL_MINUTES }}
+          NEWS_ANTROPIC_AI_KEY: ${{ secrets.NEWS_ANTROPIC_AI_KEY }}
+          NEWS_OPEN_AI_KEY: ${{ secrets.NEWS_OPEN_AI_KEY }}
         run: |
           cd backend
           pytest tests/integration --cov=src --cov-report=xml --disable-warnings
