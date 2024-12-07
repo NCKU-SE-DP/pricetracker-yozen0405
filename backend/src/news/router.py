@@ -1,9 +1,17 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from ..dependencies import session_opener, get_current_user
+from .config import news_config
 from .models import NewsArticle
-from .schemas import PromptRequest, NewsSumaryRequestSchema
+from .enums import AiModelType
+from src.services.llm_client.client import OpenAIClient, AnthropicClient
+from .schemas import (
+    PromptRequest,
+    NewsSumaryRequestSchema,
+    NewsSumaryCustomModelSchema
+)
 from .service import (
     article_id_counter,
     get_article_upvote_details,
@@ -95,3 +103,24 @@ def upvote_article(
 ):
     message = toggle_upvote(article_id, user.id, db)
     return {"message": message}
+
+@router.post("/news_summary_custom_model")
+async def news_summary_custom_model(
+        payload: NewsSumaryCustomModelSchema,
+        user=Depends(get_current_user)
+):
+    """
+    Endpoint for generating a summary using either OpenAI or Anthropic.
+    """
+    if payload.ai_model == AiModelType.OPENAI:
+        client = OpenAIClient(api_key=news_config.OPEN_AI_KEY)
+    elif payload.ai_model == AiModelType.ANTHROPIC:
+        client = AnthropicClient(api_key=news_config.ANTROPIC_AI_KEY)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported model type: {payload.ai_model}")
+
+    try:
+        result = client.generate_summary(payload.content)
+        return parse_summary_result(result)
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")

@@ -61,6 +61,7 @@ def parse_summary_result(result):
             result = json.loads(result)
             response_data["summary"] = result["影響"]
             response_data["reason"] = result["原因"]
-        except json.JSONDecodeError:
-            return response_data
+        except json.JSONDecodeError as e:
+            print(result)
+            response_data["error"] = f"JSONDecodeError: {str(e)}"
     return response_data

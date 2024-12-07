@@ -12,7 +12,8 @@ from src.database import Base
 from src.dependencies import session_opener
 from src.news.models import NewsArticle
 from src.models import user_news_association_table
-from src.news.schemas import NewsSumaryRequestSchema, PromptRequest
+from src.news.schemas import NewsSumaryRequestSchema, NewsSumaryCustomModelSchema
+from src.news.enums import AiModelType
 from src.auth.service import pwd_context
 from src.services.crawler.crawler_base import Headline
 
@@ -162,6 +163,32 @@ def test_news_summary(mocker, test_token):
     assert json_response["summary"] == "test impact"
     assert json_response["reason"] == "test reason"
 
+def test_news_summary_custom_model_openai(mocker, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
+    mock_openai(mocker, openai_response)
+
+    request_body = NewsSumaryCustomModelSchema(content="Test news content", ai_model=AiModelType.OPENAI)
+    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body.dict(), headers=headers)
+
+    assert response.status_code == 200
+    json_response = response.json()
+    assert json_response["summary"] == "test impact"
+    assert json_response["reason"] == "test reason"
+
+def test_news_summary_custom_model_anthropic(mocker, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
+    mock_openai(mocker, openai_response)
+
+    request_body = NewsSumaryCustomModelSchema(content="Test news content", ai_model=AiModelType.ANTHROPIC)
+    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body.dict(), headers=headers)
+
+    assert response.status_code == 200
+    json_response = response.json()
+    assert json_response["summary"] == "test impact"
+    assert json_response["reason"] == "test reason"
+
 
 def test_upvote_article(test_user_and_articles, test_token):
     user, articles = test_user_and_articles
@@ -179,3 +206,4 @@ def test_downvote_article(test_user_and_articles, test_token):
     response = client.post(f"/api/v1/news/{articles[0].id}/upvote", headers=headers)
     assert response.status_code == 200
     assert response.json()["message"] == "Upvote removed"
+

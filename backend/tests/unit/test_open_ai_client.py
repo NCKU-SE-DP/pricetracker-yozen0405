@@ -57,7 +57,7 @@ class TestOpenAIClient(unittest.TestCase):
 
         mock_generate_text.assert_called_once_with(
             messages=MessageInterface(
-                system_content="你是一個新聞摘要生成機器人，請統整新聞中提及的影響及主要原因 (影響、原因各50個字，請以json格式回答 {'影響': '...', '原因': '...'})",
+                system_content='你是一個新聞摘要生成機器人，請統整新聞中提及的影響及主要原因 (影響、原因各50個字，請以json格式回答 {"影響": "...", "原因": "..."})',
                 user_content="一篇新聞內容"
             )
         )
