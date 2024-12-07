@@ -8,5 +8,6 @@ class NewsConfig(BaseSettings):
         extra = "ignore"
     
     OPEN_AI_KEY: str
+    ANTROPIC_AI_KEY: str
 
 news_config = NewsConfig()
