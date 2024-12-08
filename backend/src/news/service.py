@@ -5,7 +5,7 @@ from sqlalchemy import select, insert, delete
 from .models import NewsArticle
 from ..users.models import user_news_association_table
 from .utils import (
-    process_news_item,
+    validate_and_parse,
     fetch_news_articles_by_keyword, 
     add_news_article,
     add_news_summary,
@@ -29,7 +29,7 @@ def fetch_and_process_news(is_initial=False):
         article_title = article.title
         relevance = openai_client.evaluate_relevance(article_title)
         if relevance == "high":
-            detailed_news = process_news_item(article)
+            detailed_news = validate_and_parse(article)
             summary_result = openai_client.generate_summary(detailed_news.content)
             detailed_news = add_news_summary(detailed_news, summary_result)
             add_news_article(detailed_news)

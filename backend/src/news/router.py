@@ -19,9 +19,7 @@ from .service import (
 )
 from .utils import (
     fetch_news_articles_by_keyword,
-    process_news_item,
-    parse_summary_result, 
-    convert_news_to_dict,
+    validate_and_parse,
     openai_client
 )
 
@@ -81,7 +79,7 @@ async def search_news_articles(request: PromptRequest):
     news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
     for news in news_items:
         try:
-            detailed_news = convert_news_to_dict(process_news_item(news))
+            detailed_news = validate_and_parse(news).model_dump()
             detailed_news["id"] = next(article_id_counter)
             news_list.append(detailed_news)
         except Exception as e:
@@ -93,7 +91,7 @@ async def news_summary(
         payload: NewsSumaryRequestSchema, user=Depends(get_current_user)
 ):
     result = openai_client.generate_summary(payload.content)
-    return parse_summary_result(result)
+    return result
 
 @router.post("/{article_id}/upvote")
 def upvote_article(
@@ -121,6 +119,6 @@ async def news_summary_custom_model(
 
     try:
         result = client.generate_summary(payload.content)
-        return parse_summary_result(result)
+        return result
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")

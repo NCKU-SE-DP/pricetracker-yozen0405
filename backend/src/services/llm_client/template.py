@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import json
+
 from .base import MessageInterface, LLMClientBase
 from .prompt import PromptTemplate
 
@@ -33,22 +35,41 @@ class LLMClientTemplate(LLMClientBase, ABC):
 
     @abstractmethod
     def _get_model(self, config) -> str:
-        """Return the model name by ."""
+        """Return the model name in config."""
         pass
 
     @abstractmethod
     def _get_client(self, config):
-        """Return the client."""
+        """Return the client in config."""
         pass
 
     @staticmethod
     def _generate_messages(prompt: str, text: str) -> MessageInterface:
         return MessageInterface(system_content=prompt, user_content=text)
+    
+    @staticmethod 
+    def _parse_summary_result(result: str) -> dict:
+        """
+        Parses the summary result JSON and extracts 'summary' and 'reason'.
 
-    def generate_summary(self, text: str) -> str:
+        :param result: The JSON-formatted summary result string.
+        :return: A dictionary with keys 'summary' and 'reason', or an empty dictionary if parsing fails.
+        """
+        response_data = {}
+        if result:
+            try:
+                result = json.loads(result)
+                response_data["summary"] = result["影響"]
+                response_data["reason"] = result["原因"]
+            except json.JSONDecodeError as e:
+                response_data["error"] = f"JSONDecodeError: {str(e)}"
+        return response_data
+
+    def generate_summary(self, text: str) -> dict:
         """Generate a summary using the specified model."""
         messages = self._generate_messages(prompt=PromptTemplate.summary(), text=text)
-        return self._generate_text(messages=messages)
+        result = self._generate_text(messages=messages)
+        return self._parse_summary_result(result)
 
     def evaluate_relevance(self, text: str) -> str:
         """Evaluate relevance using the specified model."""

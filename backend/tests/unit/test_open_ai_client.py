@@ -1,5 +1,6 @@
 import unittest
 import os
+import json
 from unittest.mock import patch
 from src.services.llm_client.client import OpenAIClient
 from src.services.llm_client.base import MessageInterface
@@ -53,7 +54,7 @@ class TestOpenAIClient(unittest.TestCase):
 
         result = self.client.generate_summary("一篇新聞內容")
 
-        self.assertEqual(result, '{"影響": "影響描述", "原因": "原因描述"}')
+        self.assertEqual(result, json.loads('{"summary": "影響描述", "reason": "原因描述"}'))
 
         mock_generate_text.assert_called_once_with(
             messages=MessageInterface(

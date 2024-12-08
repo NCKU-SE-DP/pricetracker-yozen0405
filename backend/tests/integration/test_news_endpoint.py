@@ -122,7 +122,7 @@ def mock_openai(mocker, return_content):
 def test_search_news(mocker):
     mock_openai(mocker, "keywords")
 
-    mock_headline = [Headline(title="", url="http://example.com/news1")]
+    mock_headline = [Headline(title="", url="https://udn.com/news/story/124293")]
     mock_get_new_info = mocker.patch("src.news.router.fetch_news_articles_by_keyword", return_value=mock_headline)
 
     mock_get = mocker.patch("src.services.crawler.udn_crawler.requests.get", return_value=mocker.Mock(
@@ -156,7 +156,7 @@ def test_news_summary(mocker, test_token):
     mock_openai(mocker, openai_response)
 
     request_body = NewsSumaryRequestSchema(content="Test news content")
-    response = client.post("/api/v1/news/news_summary", json=request_body.dict(), headers=headers)
+    response = client.post("/api/v1/news/news_summary", json=request_body.model_dump(), headers=headers)
 
     assert response.status_code == 200
     json_response = response.json()
@@ -169,7 +169,7 @@ def test_news_summary_custom_model_openai(mocker, test_token):
     mock_openai(mocker, openai_response)
 
     request_body = NewsSumaryCustomModelSchema(content="Test news content", ai_model=AiModelType.OPENAI)
-    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body.dict(), headers=headers)
+    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body.model_dump(), headers=headers)
 
     assert response.status_code == 200
     json_response = response.json()
@@ -182,7 +182,7 @@ def test_news_summary_custom_model_anthropic(mocker, test_token):
     mock_openai(mocker, openai_response)
 
     request_body = NewsSumaryCustomModelSchema(content="Test news content", ai_model=AiModelType.ANTHROPIC)
-    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body.dict(), headers=headers)
+    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body.model_dump(), headers=headers)
 
     assert response.status_code == 200
     json_response = response.json()

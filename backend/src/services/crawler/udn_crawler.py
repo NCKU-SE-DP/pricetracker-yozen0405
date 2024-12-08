@@ -49,7 +49,7 @@ class UDNCrawler(NewsCrawlerBase):
     CHANNEL_ID = 2
 
     def __init__(self, timeout: int = 5) -> None:
-        self.news_website_url = crawler_config.UDN_API_URL
+        self.news_website_url = crawler_config.UDN_API_URL  
         self.timeout = timeout
 
     def startup(self, search_term: str) -> list[Headline]:
@@ -95,7 +95,7 @@ class UDNCrawler(NewsCrawlerBase):
 
     def _perform_request(self, url: str | None = None, params: dict | None = None) -> Response:
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
             return response
         except RequestException as e:
@@ -116,7 +116,7 @@ class UDNCrawler(NewsCrawlerBase):
         except (KeyError, ValueError, TypeError) as e:
             raise RuntimeError(f"Failed to parse headlines: {e}")
 
-    def parse(self, url: str) -> News:
+    def _parse(self, url: str) -> News:
         response = self._perform_request(url=url)
         soup = BeautifulSoup(response.text, "html.parser")
 
@@ -141,34 +141,6 @@ class UDNCrawler(NewsCrawlerBase):
             time=time,
             content=content
         )
-    
-    def add_news_summary(self, news: News, summary_result: str) -> NewsWithSummary:
-        """
-        Adds a summary and reason to a News object, returning a NewsWithSummary object.
-
-        :param news: News object containing basic news details.
-        :param summary_result: JSON string containing the summary and reason.
-        :return: NewsWithSummary object with added summary and reason.
-        """
-        try:
-            summary_data = json.loads(summary_result)
-            summary =  summary_data["影響"]
-            reason = summary_data["原因"]
-        except json.JSONDecodeError:
-            print(f"Failed to decode summary_result: {summary_result}")
-            summary = ""
-            reason = ""
-
-        news_with_summary = NewsWithSummary(
-            title=news.title,
-            url=news.url,
-            time=news.time,
-            content=news.content,
-            summary=summary,
-            reason=reason,
-        )
-        
-        return news_with_summary
     
     def save(self, news: NewsWithSummary, db: Session):
         existing_news = db.query(NewsArticle).filter_by(url=news.url).first()
