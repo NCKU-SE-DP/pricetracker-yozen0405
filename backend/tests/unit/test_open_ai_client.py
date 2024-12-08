@@ -4,6 +4,7 @@ import json
 from unittest.mock import patch
 from src.services.llm_client.client import OpenAIClient
 from src.services.llm_client.base import MessageInterface
+from src.services.llm_client.enum import RelevanceLevel
 
 # 除非確認要使用真實的API進行測試(當然會因此擁有額外的開銷)，否則將RUN_REAL_API_TESTS設置為False
 RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"
@@ -20,13 +21,13 @@ class TestOpenAIClient(unittest.TestCase):
     @unittest.skipIf(not RUN_REAL_API_TESTS, "模擬 API 呼叫，跳過真實測試")
     def test_evaluate_relevance_real(self):
         result = self.client.evaluate_relevance("食品價格上漲")
-        self.assertIn(result, ["high", "medium", "low"])
+        self.assertIn(result, RelevanceLevel)
 
     @unittest.skipIf(not RUN_REAL_API_TESTS, "模擬 API 呼叫，跳過真實測試")
     def test_generate_summary_real(self):
         result = self.client.generate_summary("一篇有關食品價格的新聞內容")
-        self.assertIn("影響", result)
-        self.assertIn("原因", result)
+        self.assertIn("summary", result)
+        self.assertIn("reason", result)
 
     @unittest.skipIf(not RUN_REAL_API_TESTS, "模擬 API 呼叫，跳過真實測試")
     def test_extract_search_keywords_real(self):
@@ -35,11 +36,11 @@ class TestOpenAIClient(unittest.TestCase):
 
     @patch('src.services.llm_client.client.OpenAIClient._generate_text')
     def test_evaluate_relevance(self, mock_generate_text):
-        mock_generate_text.return_value = 'high'
+        mock_generate_text.return_value = "high"
 
         result = self.client.evaluate_relevance("食品價格上漲")
 
-        self.assertEqual(result, 'high')
+        self.assertEqual(result, RelevanceLevel.HIGH)
 
         mock_generate_text.assert_called_once_with(
             messages=MessageInterface(

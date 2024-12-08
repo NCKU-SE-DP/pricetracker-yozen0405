@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, insert, delete
 
 from .models import NewsArticle
+from src.services.llm_client.enum import RelevanceLevel
 from ..users.models import user_news_association_table
 from .utils import (
     validate_and_parse,
@@ -28,7 +29,7 @@ def fetch_and_process_news(is_initial=False):
     for article in news_articles:
         article_title = article.title
         relevance = openai_client.evaluate_relevance(article_title)
-        if relevance == "high":
+        if relevance == RelevanceLevel.HIGH:
             detailed_news = validate_and_parse(article)
             summary_result = openai_client.generate_summary(detailed_news.content)
             detailed_news = add_news_summary(detailed_news, summary_result)

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import json
 
 from .base import MessageInterface, LLMClientBase
-from .prompt import PromptTemplate
+from .enum import PromptTemplate, RelevanceLevel
 
 class LLMClientTemplate(LLMClientBase, ABC):
     """
@@ -44,8 +44,8 @@ class LLMClientTemplate(LLMClientBase, ABC):
         pass
 
     @staticmethod
-    def _generate_messages(prompt: str, text: str) -> MessageInterface:
-        return MessageInterface(system_content=prompt, user_content=text)
+    def _generate_messages(prompt: PromptTemplate, text: str) -> MessageInterface:
+        return MessageInterface(system_content=prompt.to_string(), user_content=text)
     
     @staticmethod 
     def _parse_summary_result(result: str) -> dict:
@@ -67,18 +67,23 @@ class LLMClientTemplate(LLMClientBase, ABC):
 
     def generate_summary(self, text: str) -> dict:
         """Generate a summary using the specified model."""
-        messages = self._generate_messages(prompt=PromptTemplate.summary(), text=text)
+        messages = self._generate_messages(prompt=PromptTemplate.SUMMARY, text=text)
         result = self._generate_text(messages=messages)
         return self._parse_summary_result(result)
 
-    def evaluate_relevance(self, text: str) -> str:
+    def evaluate_relevance(self, text: str) -> RelevanceLevel:
         """Evaluate relevance using the specified model."""
-        messages = self._generate_messages(prompt=PromptTemplate.relevance(), text=text)
-        return self._generate_text(messages=messages)
+        messages = self._generate_messages(prompt=PromptTemplate.RELEVANCE, text=text)
+        result = self._generate_text(messages=messages)
+
+        if result in RelevanceLevel._value2member_map_:
+            return RelevanceLevel(result)
+        else:
+            raise ValueError(f"Unexpected relevance level: {result}")
 
     def extract_search_keywords(self, text: str) -> str:
         """Extract search keywords using the specified model."""
-        messages = self._generate_messages(prompt=PromptTemplate.keywords(), text=text)
+        messages = self._generate_messages(prompt=PromptTemplate.KEYWORDS, text=text)
         return self._generate_text(messages=messages)
     
     def _generate_text(self, messages: MessageInterface) -> str:
