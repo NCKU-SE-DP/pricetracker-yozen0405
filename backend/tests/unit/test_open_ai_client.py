@@ -1,10 +1,15 @@
 import unittest
 import os
+from dotenv import load_dotenv
 import json
 from unittest.mock import patch
 from src.services.llm_client.client import OpenAIClient
 from src.services.llm_client.base import MessageInterface
 from src.services.llm_client.enum import RelevanceLevel
+
+if not os.getenv("NEWS_OPEN_AI_KEY"):
+    dotenv_path = os.path.join(os.path.dirname(__file__), "../../.env") 
+    load_dotenv(dotenv_path)
 
 # 除非確認要使用真實的API進行測試(當然會因此擁有額外的開銷)，否則將RUN_REAL_API_TESTS設置為False
 RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"
@@ -13,8 +18,9 @@ RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"
 class TestOpenAIClient(unittest.TestCase):
     @classmethod
     def setUpClass(self):
+        print(f'有無：{RUN_REAL_API_TESTS}')
         if RUN_REAL_API_TESTS:
-            self.client = OpenAIClient(api_key=os.getenv("OPENAI_API_KEY"))
+            self.client = OpenAIClient(api_key=os.getenv("NEWS_OPEN_AI_KEY"))
         else:
             self.client = OpenAIClient(api_key="fake_api_key")
 

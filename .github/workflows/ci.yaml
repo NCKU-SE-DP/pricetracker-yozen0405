@@ -49,6 +49,7 @@ jobs:
             GLOBAL_FETCH_NEWS_INTERVAL_MINUTES: ${{ secrets.GLOBAL_FETCH_NEWS_INTERVAL_MINUTES }}
             NEWS_ANTROPIC_AI_KEY: ${{ secrets.NEWS_ANTROPIC_AI_KEY }}
             NEWS_OPEN_AI_KEY: ${{ secrets.NEWS_OPEN_AI_KEY }}
+            RUN_REAL_API_TESTS: ${{ secrets.RUN_REAL_API_TESTS }}
         run: |
           cd backend
           pytest tests/unit --cov=src --cov-report=xml --disable-warnings
@@ -71,6 +72,7 @@ jobs:
           GLOBAL_FETCH_NEWS_INTERVAL_MINUTES: ${{ secrets.GLOBAL_FETCH_NEWS_INTERVAL_MINUTES }}
           NEWS_ANTROPIC_AI_KEY: ${{ secrets.NEWS_ANTROPIC_AI_KEY }}
           NEWS_OPEN_AI_KEY: ${{ secrets.NEWS_OPEN_AI_KEY }}
+          RUN_REAL_API_TESTS: ${{ secrets.RUN_REAL_API_TESTS }}
         run: |
           cd backend
           pytest tests/integration --cov=src --cov-report=xml --disable-warnings
