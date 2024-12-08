@@ -18,7 +18,6 @@ RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"
 class TestOpenAIClient(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        print(f'有無：{RUN_REAL_API_TESTS}')
         if RUN_REAL_API_TESTS:
             self.client = OpenAIClient(api_key=os.getenv("NEWS_OPEN_AI_KEY"))
         else:
