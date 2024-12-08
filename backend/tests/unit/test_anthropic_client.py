@@ -39,7 +39,7 @@ class TestAnthropicClient(unittest.TestCase):
         result = self.client.extract_search_keywords("這篇新聞提到食品價格的波動以及市場的供應鏈問題")
         self.assertGreater(len(result.split()), 0)
 
-    @patch('src.services.llm_client.client.OpenAIClient._generate_text')
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
     def test_evaluate_relevance(self, mock_generate_text):
         mock_generate_text.return_value = "high"
 
@@ -54,7 +54,7 @@ class TestAnthropicClient(unittest.TestCase):
             )
         )
 
-    @patch('src.services.llm_client.client.OpenAIClient._generate_text')
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
     def test_generate_summary(self, mock_generate_text):
         mock_generate_text.return_value = '{"影響": "影響描述", "原因": "原因描述"}'
 
@@ -69,7 +69,7 @@ class TestAnthropicClient(unittest.TestCase):
             )
         )
 
-    @patch('src.services.llm_client.client.OpenAIClient._generate_text')
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
     def test_extract_search_keywords(self, mock_generate_text):
         mock_generate_text.return_value = '食品 價格'
 
