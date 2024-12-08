@@ -11,7 +11,7 @@ class LLMConfig(ABC):
         pass
 
 class OpenAIConfig(LLMConfig):
-    MODEL = "openai:gpt-4o"
+    MODEL = "openai:gpt-4"
 
     def __init__(self, api_key: str):
         super().__init__(api_key, self.MODEL)
