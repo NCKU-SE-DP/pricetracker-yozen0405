@@ -14,7 +14,7 @@ from src.news.models import NewsArticle
 from src.models import user_news_association_table
 from src.news.schemas import NewsSumaryRequestSchema, PromptRequest
 from src.auth.service import pwd_context
-from src.crawler.crawler_base import Headline
+from src.services.crawler.crawler_base import Headline
 
 SECRET_KEY = "1892dhianiandowqd0n"
 ALGORITHM = "HS256"
@@ -114,7 +114,7 @@ def test_read_user_news(test_user, test_token, test_articles):
     assert json_response[1]["is_upvoted"] is False
 
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch('src.ai_service.utils.OpenAI')
+    mock_openai_client = mocker.patch('src.services.llm_client.openai_client.OpenAI')
 
     mock_message = Mock()
     mock_message.content = return_content
@@ -135,7 +135,7 @@ def test_search_news(mocker):
     mock_headline = [Headline(title="", url="http://example.com/news1")]
     mock_get_new_info = mocker.patch("src.news.router.fetch_news_articles_by_keyword", return_value=mock_headline)
 
-    mock_get = mocker.patch("src.crawler.udn_crawler.requests.get", return_value=mocker.Mock(
+    mock_get = mocker.patch("src.services.crawler.udn_crawler.requests.get", return_value=mocker.Mock(
         text="""
         <html>
         <h1 class="article-content__title">Test Title</h1>

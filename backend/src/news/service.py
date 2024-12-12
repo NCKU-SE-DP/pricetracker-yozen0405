@@ -4,12 +4,12 @@ from sqlalchemy import select, insert, delete
 
 from .models import NewsArticle
 from ..users.models import user_news_association_table
-from ..ai_service.service import relevance_check, generate_summary
 from .utils import (
     process_news_item,
     fetch_news_articles_by_keyword, 
     add_news_article,
-    add_news_summary
+    add_news_summary,
+    openai_client
 )
 
 # Unique ID counter for generating temporary article IDs in memory.
@@ -27,10 +27,10 @@ def fetch_and_process_news(is_initial=False):
     # Iterate through each news article
     for article in news_articles:
         article_title = article.title
-        relevance = relevance_check(article_title)
+        relevance = openai_client.evaluate_relevance(article_title)
         if relevance == "high":
             detailed_news = process_news_item(article)
-            summary_result = generate_summary(detailed_news.content)
+            summary_result = openai_client.generate_summary(detailed_news.content)
             detailed_news = add_news_summary(detailed_news, summary_result)
             add_news_article(detailed_news)
 

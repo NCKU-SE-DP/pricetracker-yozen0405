@@ -2,15 +2,15 @@ import unittest
 from unittest.mock import patch, MagicMock
 from requests.models import Response
 from sqlalchemy.orm import Session
-from src.crawler.udn_crawler import UDNCrawler, NewsWithSummary
-from src.crawler.exceptions import DomainMismatchException
+from src.services.crawler.udn_crawler import UDNCrawler, NewsWithSummary
+from src.services.crawler.exceptions import DomainMismatchException
 
 class TestUDNCrawler(unittest.TestCase):
 
     def setUp(self):
         self.scraper = UDNCrawler(timeout=5)
 
-    @patch("src.crawler.udn_crawler.requests.get")
+    @patch("src.services.crawler.udn_crawler.requests.get")
     def test_perform_request_success(self, mock_get):
         mock_response = MagicMock(spec=Response)
         mock_response.status_code = 200
@@ -20,13 +20,13 @@ class TestUDNCrawler(unittest.TestCase):
         self.assertEqual(response, mock_response)
         mock_get.assert_called_once()
 
-    @patch("src.crawler.udn_crawler.requests.get")
+    @patch("src.services.crawler.udn_crawler.requests.get")
     def test_perform_request_failure(self, mock_get):
         mock_get.side_effect = Exception("Network Error")
         with self.assertRaises(Exception):
             self.scraper._perform_request(params={"page": 1, "id": "search:technology"})
 
-    @patch("src.crawler.udn_crawler.requests.get")
+    @patch("src.services.crawler.udn_crawler.requests.get")
     def test_fetch_news_data(self, mock_get):
         mock_response = MagicMock(spec=Response)
         mock_response.status_code = 200
@@ -40,7 +40,7 @@ class TestUDNCrawler(unittest.TestCase):
         self.assertEqual(headlines[0].title, "Test News")
         self.assertEqual(headlines[0].url, "https://udn.com/news/test-news")
 
-    @patch("src.crawler.udn_crawler.requests.get")
+    @patch("src.services.crawler.udn_crawler.requests.get")
     def test_parse_news(self, mock_get):
         mock_response = MagicMock(spec=Response)
         mock_response.status_code = 200
@@ -67,7 +67,7 @@ class TestUDNCrawler(unittest.TestCase):
         self.assertEqual(params["id"], "search:technology")
         self.assertEqual(params["channelId"], 2)
 
-    @patch("src.crawler.udn_crawler.Session")
+    @patch("src.services.crawler.udn_crawler.Session")
     def test_save_news(self, mock_session):
         mock_db = MagicMock(spec=Session)
         mock_db.query.return_value.filter_by.return_value.first.return_value = None

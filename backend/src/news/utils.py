@@ -1,12 +1,12 @@
-from bs4 import BeautifulSoup
-import requests
 import json
 
 from ..database import SessionLocal
-from ..crawler.udn_crawler import UDNCrawler
+from src.services.crawler.udn_crawler import UDNCrawler
+from src.services.llm_client.openai_client import OpenAIClient
 
 crawler = UDNCrawler()
-    
+openai_client = OpenAIClient()
+
 def convert_news_to_dict(news):
     return {
         "url": news.url,
