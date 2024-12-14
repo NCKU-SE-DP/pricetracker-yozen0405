@@ -40,9 +40,10 @@ import requests
 import json
 from sqlalchemy.orm import Session
 
+from src.services.logger import udn_crawler_logger
 from .crawler_base import NewsCrawlerBase, Headline, News, NewsWithSummary
 from src.news.models import NewsArticle
-from .exceptions import DomainMismatchException
+from src.services.exceptions_handler import InternalServerErrorException
 from .config import crawler_config
 
 class UDNCrawler(NewsCrawlerBase):
@@ -62,7 +63,13 @@ class UDNCrawler(NewsCrawlerBase):
         :return: A list of Headline namedtuples containing the title and URL of news articles.
         :rtype: list[Headline]
         """
-        return self.get_headline(search_term, page=(1, 10))
+        try:
+            headlines = self.get_headline(search_term, page=(1, 10))
+            udn_crawler_logger.startup_success(search_term, count=len(headlines))
+            return headlines
+        except Exception as e:
+            udn_crawler_logger.startup_failed(search_term, error=e)
+            raise
 
     def get_headline(
         self, search_term: str, page: int | tuple[int, int]
@@ -72,18 +79,29 @@ class UDNCrawler(NewsCrawlerBase):
         # If 'page' is a tuple, unpack it and create a range representing those pages (inclusive).
         # If 'page' is an int, create a list containing only that single page number.
         # page_range = range(*page) if isinstance(page, tuple) else [page]
-        page_range = range(page[0], page[1] + 1) if isinstance(page, tuple) else [page]
+        try:
+            page_range = range(page[0], page[1] + 1) if isinstance(page, tuple) else [page]
+            udn_crawler_logger.fetch_headline_start(search_term=search_term, pages=list(page_range))
 
-        headlines = []
-        for page_num in page_range:
-            headlines.extend(self._fetch_news(page=page_num, search_term=search_term))
-        return headlines
+            headlines = []
+            for page_num in page_range:
+                fetched_headlines = self._fetch_news(page=page_num, search_term=search_term)
+                headlines.extend(fetched_headlines)
+                udn_crawler_logger.fetch_page_success(search_term=search_term, page=page_num, count=len(fetched_headlines))
+            
+            udn_crawler_logger.fetch_headline_success(search_term=search_term, total_count=len(headlines))
+            return headlines
+        except Exception as e:
+            udn_crawler_logger.fetch_headline_failed(search_term=search_term, error=e)
+            raise
 
     def _fetch_news(self, page: int, search_term: str) -> list[Headline]:
         params = self._create_search_params(page=page, search_term=search_term)
-        response = self._perform_request(params=params)
-
-        return self._parse_headlines(response)
+        try:
+            response = self._perform_request(params=params)
+            return self._parse_headlines(response)
+        except Exception:
+            raise
 
     def _create_search_params(self, page: int, search_term: str) -> dict:
         return {
@@ -95,18 +113,22 @@ class UDNCrawler(NewsCrawlerBase):
 
     def _perform_request(self, url: str | None = None, params: dict | None = None) -> Response:
         try:
+            if url is None:
+                url = self.news_website_url
             response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
+            udn_crawler_logger.request_success(params=params, url=url)
             return response
         except RequestException as e:
-            raise RuntimeError(f"Failed to perform request to {url}: {e}")
+            udn_crawler_logger.request_failed(params, error=e)
+            raise
         
     @staticmethod
     def _parse_headlines(response: Response) -> list[Headline]:
         try:
             data = response.json()
             if "lists" not in data:
-                raise ValueError("The response does not contain 'lists'")
+                raise InternalServerErrorException()
             processed_items = [
                 {"title": item["title"], "url": item["titleLink"]}
                 for item in data["lists"]
@@ -114,38 +136,49 @@ class UDNCrawler(NewsCrawlerBase):
         
             return [Headline(**item) for item in processed_items]
         except (KeyError, ValueError, TypeError) as e:
-            raise RuntimeError(f"Failed to parse headlines: {e}")
+            raise InternalServerErrorException(e)
 
     def _parse(self, url: str) -> News:
-        response = self._perform_request(url=url)
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        return self._extract_news(soup, url)
+        udn_crawler_logger.parse_news_start(url=url)
+        try:
+            response = self._perform_request(url=url)
+            soup = BeautifulSoup(response.text, "html.parser")
+            news = self._extract_news(soup, url)
+            udn_crawler_logger.parse_news_success(url=url)
+            return news
+        except Exception as e:
+            udn_crawler_logger.parse_news_failed(url=url, error=e)
+            raise
 
     @staticmethod
     def _extract_news(soup: BeautifulSoup, url: str) -> News:
-        title = soup.find("h1", class_="article-content__title").text
-        time = soup.find("time", class_="article-content__time").text
-        content_section = soup.find("section", class_="article-content__editor")
+        try:
+            title = soup.find("h1", class_="article-content__title").text
+            time = soup.find("time", class_="article-content__time").text
+            content_section = soup.find("section", class_="article-content__editor")
 
-        paragraphs = [
-            p.text
-            for p in content_section.find_all("p")
-            if p.text.strip() != "" and "▪" not in p.text
-        ]
-        content = " ".join(paragraphs)
-
-        return News(
-            title=title,
-            url=url,
-            time=time,
-            content=content
-        )
+            paragraphs = [
+                p.text
+                for p in content_section.find_all("p")
+                if p.text.strip() != "" and "▪" not in p.text
+            ]
+            content = " ".join(paragraphs)
+            
+            udn_crawler_logger.extract_news_success(url=url, title=title)
+            return News(
+                title=title,
+                url=url,
+                time=time,
+                content=content
+            )
+        except Exception as e:
+            udn_crawler_logger.extract_news_failed(url=url, error=e)
+            raise
     
     def save(self, news: NewsWithSummary, db: Session):
         existing_news = db.query(NewsArticle).filter_by(url=news.url).first()
         if existing_news:
-            print(f"News with URL {news.url} already exists. Skipping save.")
+            udn_crawler_logger.save_news_skipped(url=news.url)
             return
 
         new_article = NewsArticle(
@@ -158,7 +191,12 @@ class UDNCrawler(NewsCrawlerBase):
         )
 
         db.add(new_article)
-        self._commit_changes(db)
+        try:
+            self._commit_changes(db)
+            udn_crawler_logger.save_news_success(url=news.url)
+        except Exception as e:
+            udn_crawler_logger.save_news_failed(url=news.url, error=e)
+            raise
         
     @staticmethod
     def _commit_changes(db: Session):
@@ -166,5 +204,5 @@ class UDNCrawler(NewsCrawlerBase):
             db.commit()
         except Exception as e:
             db.rollback()
-            raise RuntimeError(f"Failed to save news to database: {e}")
+            raise
         db.close()

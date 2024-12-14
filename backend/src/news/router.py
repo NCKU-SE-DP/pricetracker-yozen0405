@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
 
 from ..dependencies import session_opener, get_current_user
 from .config import news_config
-from .models import NewsArticle
 from .enums import AiModelType
 from src.services.llm_client.client import OpenAIClient, AnthropicClient
+from src.services.exceptions_handler import UnsupportedFeatureException, NoResourceFoundException
+from src.services.logger import news_logger
 from .schemas import (
     PromptRequest,
     NewsSumaryRequestSchema,
@@ -14,7 +14,7 @@ from .schemas import (
 )
 from .service import (
     article_id_counter,
-    get_article_upvote_details,
+    fetch_news_with_details,
     toggle_upvote,
 )
 from .utils import (
@@ -37,14 +37,7 @@ def fetch_news_with_upvote_details(db: Session = Depends(session_opener)):
     :param db: Database session dependency for querying news articles.
     :return: A list of news articles with upvote count and upvoted status.
     """
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
-    for article in news:
-        upvotes, upvoted = get_article_upvote_details(article.id, None, db)
-        result.append(
-            {**article.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
-        )
-    return result
+    return fetch_news_with_details(db)
 
 @router.get("/user_news")
 def get_user_specific_news(
@@ -58,23 +51,13 @@ def get_user_specific_news(
     :param user: Authenticated user dependency for user-specific data.
     :return: A list of news articles with upvote count and the user's upvoted status.
     """
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
-    for article in news:
-        upvotes, upvoted = get_article_upvote_details(article.id, user.id, db)
-        result.append(
-            {
-                **article.__dict__,
-                "upvotes": upvotes,
-                "is_upvoted": upvoted,
-            }
-        )
-    return result
+    return fetch_news_with_details(db, user_id=user.id)
 
 @router.post("/search_news")
 async def search_news_articles(request: PromptRequest):
     prompt = request.prompt
     news_list = []
+    news_logger.searching_udn_news()
     keywords = openai_client.extract_search_keywords(prompt)
     news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
     for news in news_items:
@@ -82,9 +65,14 @@ async def search_news_articles(request: PromptRequest):
             detailed_news = validate_and_parse(news).model_dump()
             detailed_news["id"] = next(article_id_counter)
             news_list.append(detailed_news)
+            news_logger.search_udn_success(detailed_news["title"])
         except Exception as e:
-            print(e)
-    return sorted(news_list, key=lambda x: x["time"], reverse=True)
+            news_logger.search_udn_failed(news.url, error=e)
+    
+    if (len(news_items)):
+        return sorted(news_list, key=lambda x: x["time"], reverse=True)
+    else:
+        raise NoResourceFoundException()
 
 @router.post("/news_summary")
 async def news_summary(
@@ -99,8 +87,13 @@ def upvote_article(
         db=Depends(session_opener),
         user=Depends(get_current_user),
 ):
-    message = toggle_upvote(article_id, user.id, db)
-    return {"message": message}
+    try:
+        message = toggle_upvote(article_id, user.id, db)
+        news_logger.upvote_success(article_id=article_id, user_id=user.id)
+        return {"message": message}
+    except Exception as e:
+        news_logger.upvote_failed(article_id=article_id, user_id=user.id, error=e)
+        raise
 
 @router.post("/news_summary_custom_model")
 async def news_summary_custom_model(
@@ -115,10 +108,7 @@ async def news_summary_custom_model(
     elif payload.ai_model == AiModelType.ANTHROPIC:
         client = AnthropicClient(api_key=news_config.ANTROPIC_AI_KEY)
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported model type: {payload.ai_model}")
+        raise UnsupportedFeatureException(feature_name=f"model type: {payload.ai_model}")
 
-    try:
-        result = client.generate_summary(payload.content)
-        return result
-    except RuntimeError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")
+    result = client.generate_summary(payload.content)
+    return result
