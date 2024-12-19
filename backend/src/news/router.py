@@ -1,9 +1,17 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
 
 from ..dependencies import session_opener, get_current_user
+from .config import news_config
 from .models import NewsArticle
-from .schemas import PromptRequest, NewsSumaryRequestSchema
+from .enums import AiModelType
+from src.services.llm_client.client import OpenAIClient, AnthropicClient
+from .schemas import (
+    PromptRequest,
+    NewsSumaryRequestSchema,
+    NewsSumaryCustomModelSchema
+)
 from .service import (
     article_id_counter,
     get_article_upvote_details,
@@ -11,9 +19,7 @@ from .service import (
 )
 from .utils import (
     fetch_news_articles_by_keyword,
-    process_news_item,
-    parse_summary_result, 
-    convert_news_to_dict,
+    validate_and_parse,
     openai_client
 )
 
@@ -73,7 +79,7 @@ async def search_news_articles(request: PromptRequest):
     news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
     for news in news_items:
         try:
-            detailed_news = convert_news_to_dict(process_news_item(news))
+            detailed_news = validate_and_parse(news).model_dump()
             detailed_news["id"] = next(article_id_counter)
             news_list.append(detailed_news)
         except Exception as e:
@@ -85,7 +91,7 @@ async def news_summary(
         payload: NewsSumaryRequestSchema, user=Depends(get_current_user)
 ):
     result = openai_client.generate_summary(payload.content)
-    return parse_summary_result(result)
+    return result
 
 @router.post("/{article_id}/upvote")
 def upvote_article(
@@ -95,3 +101,24 @@ def upvote_article(
 ):
     message = toggle_upvote(article_id, user.id, db)
     return {"message": message}
+
+@router.post("/news_summary_custom_model")
+async def news_summary_custom_model(
+        payload: NewsSumaryCustomModelSchema,
+        user=Depends(get_current_user)
+):
+    """
+    Endpoint for generating a summary using either OpenAI or Anthropic.
+    """
+    if payload.ai_model == AiModelType.OPENAI:
+        client = OpenAIClient(api_key=news_config.OPEN_AI_KEY)
+    elif payload.ai_model == AiModelType.ANTHROPIC:
+        client = AnthropicClient(api_key=news_config.ANTROPIC_AI_KEY)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported model type: {payload.ai_model}")
+
+    try:
+        result = client.generate_summary(payload.content)
+        return result
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")

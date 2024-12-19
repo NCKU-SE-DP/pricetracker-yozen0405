@@ -2,24 +2,18 @@ import json
 
 from ..database import SessionLocal
 from src.services.crawler.udn_crawler import UDNCrawler
-from src.services.llm_client.openai_client import OpenAIClient
+from src.services.llm_client.client import OpenAIClient
+from src.news.config import news_config
+from src.services.crawler.crawler_base import NewsWithSummary
 
 crawler = UDNCrawler()
-openai_client = OpenAIClient()
+openai_client = OpenAIClient(api_key=news_config.OPEN_AI_KEY)
 
-def convert_news_to_dict(news):
-    return {
-        "url": news.url,
-        "title": news.title,
-        "time": news.time,
-        "content": news.content,
-    }
-
-def process_news_item(news):
+def validate_and_parse(news):
     """
     Fetches detailed content from a news article.
     """
-    return crawler.parse(news.url)
+    return crawler.validate_and_parse(news.url)
 
 def add_news_article(news_article_data):
     """
@@ -44,22 +38,15 @@ def fetch_news_articles_by_keyword(search_term, is_initial=False):
     else:
         return crawler.get_headline(search_term=search_term, page=1)
     
-def add_news_summary(news, summary_result):
-    return crawler.add_news_summary(news=news, summary_result=summary_result)
-
-def parse_summary_result(result):
-    """
-    Parses the summary result JSON and extracts 'summary' and 'reason'.
-
-    :param result: The JSON-formatted summary result string.
-    :return: A dictionary with keys 'summary' and 'reason', or an empty dictionary if parsing fails.
-    """
-    response_data = {}
-    if result:
-        try:
-            result = json.loads(result)
-            response_data["summary"] = result["影響"]
-            response_data["reason"] = result["原因"]
-        except json.JSONDecodeError:
-            return response_data
-    return response_data
+def add_news_summary(news, summary_data):
+    summary =  summary_data["影響"]
+    reason = summary_data["原因"]
+    news_with_summary = NewsWithSummary(
+        title=news.title,
+        url=news.url,
+        time=news.time,
+        content=news.content,
+        summary=summary,
+        reason=reason,
+    )
+    return news_with_summary

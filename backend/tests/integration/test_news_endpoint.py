@@ -12,7 +12,8 @@ from src.database import Base
 from src.dependencies import session_opener
 from src.news.models import NewsArticle
 from src.models import user_news_association_table
-from src.news.schemas import NewsSumaryRequestSchema, PromptRequest
+from src.news.schemas import NewsSumaryRequestSchema, NewsSumaryCustomModelSchema
+from src.news.enums import AiModelType
 from src.auth.service import pwd_context
 from src.services.crawler.crawler_base import Headline
 
@@ -114,25 +115,14 @@ def test_read_user_news(test_user, test_token, test_articles):
     assert json_response[1]["is_upvoted"] is False
 
 def mock_openai(mocker, return_content):
-    mock_openai_client = mocker.patch('src.services.llm_client.openai_client.OpenAI')
-
-    mock_message = Mock()
-    mock_message.content = return_content
-
-    mock_choice = Mock()
-    mock_choice.message = mock_message
-
-    mock_completion = Mock()
-    mock_completion.choices = [mock_choice]
-
-    mock_openai_client.return_value.chat.completions.create.return_value = mock_completion
+    mock_openai_client = mocker.patch('src.services.llm_client.template.LLMClientTemplate._generate_text', return_value=return_content)
 
     return mock_openai_client
 
 def test_search_news(mocker):
     mock_openai(mocker, "keywords")
 
-    mock_headline = [Headline(title="", url="http://example.com/news1")]
+    mock_headline = [Headline(title="", url="https://udn.com/news/story/124293")]
     mock_get_new_info = mocker.patch("src.news.router.fetch_news_articles_by_keyword", return_value=mock_headline)
 
     mock_get = mocker.patch("src.services.crawler.udn_crawler.requests.get", return_value=mocker.Mock(
@@ -166,7 +156,33 @@ def test_news_summary(mocker, test_token):
     mock_openai(mocker, openai_response)
 
     request_body = NewsSumaryRequestSchema(content="Test news content")
-    response = client.post("/api/v1/news/news_summary", json=request_body.dict(), headers=headers)
+    response = client.post("/api/v1/news/news_summary", json=request_body.model_dump(), headers=headers)
+
+    assert response.status_code == 200
+    json_response = response.json()
+    assert json_response["summary"] == "test impact"
+    assert json_response["reason"] == "test reason"
+
+def test_news_summary_custom_model_openai(mocker, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
+    mock_openai(mocker, openai_response)
+
+    request_body = NewsSumaryCustomModelSchema(content="Test news content", ai_model=AiModelType.OPENAI)
+    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body.model_dump(), headers=headers)
+
+    assert response.status_code == 200
+    json_response = response.json()
+    assert json_response["summary"] == "test impact"
+    assert json_response["reason"] == "test reason"
+
+def test_news_summary_custom_model_anthropic(mocker, test_token):
+    headers = {"Authorization": f"Bearer {test_token}"}
+    openai_response = json.dumps({"影響": "test impact", "原因": "test reason"})
+    mock_openai(mocker, openai_response)
+
+    request_body = NewsSumaryCustomModelSchema(content="Test news content", ai_model=AiModelType.ANTHROPIC)
+    response = client.post("/api/v1/news/news_summary_custom_model", json=request_body.model_dump(), headers=headers)
 
     assert response.status_code == 200
     json_response = response.json()
@@ -190,3 +206,4 @@ def test_downvote_article(test_user_and_articles, test_token):
     response = client.post(f"/api/v1/news/{articles[0].id}/upvote", headers=headers)
     assert response.status_code == 200
     assert response.json()["message"] == "Upvote removed"
+

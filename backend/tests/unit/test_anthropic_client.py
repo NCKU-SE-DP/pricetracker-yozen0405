@@ -3,11 +3,11 @@ import os
 from dotenv import load_dotenv
 import json
 from unittest.mock import patch
-from src.services.llm_client.client import OpenAIClient
+from src.services.llm_client.client import AnthropicClient
 from src.services.llm_client.base import MessageInterface
 from src.services.llm_client.enum import RelevanceLevel
 
-if not os.getenv("NEWS_OPEN_AI_KEY"):
+if not os.getenv("NEWS_ANTROPIC_AI_KEY"):
     dotenv_path = os.path.join(os.path.dirname(__file__), "../../.env") 
     load_dotenv(dotenv_path)
 
@@ -15,13 +15,13 @@ if not os.getenv("NEWS_OPEN_AI_KEY"):
 RUN_REAL_API_TESTS = os.getenv("RUN_REAL_API_TESTS", "false").lower() == "true"
 
 
-class TestOpenAIClient(unittest.TestCase):
+class TestAnthropicClient(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         if RUN_REAL_API_TESTS:
-            self.client = OpenAIClient(api_key=os.getenv("NEWS_OPEN_AI_KEY"))
+            self.client = AnthropicClient(api_key=os.getenv("NEWS_ANTROPIC_AI_KEY"))
         else:
-            self.client = OpenAIClient(api_key="fake_api_key")
+            self.client = AnthropicClient(api_key="fake_api_key")
 
     @unittest.skipIf(not RUN_REAL_API_TESTS, "模擬 API 呼叫，跳過真實測試")
     def test_evaluate_relevance_real(self):
@@ -39,7 +39,7 @@ class TestOpenAIClient(unittest.TestCase):
         result = self.client.extract_search_keywords("這篇新聞提到食品價格的波動以及市場的供應鏈問題")
         self.assertGreater(len(result.split()), 0)
 
-    @patch('src.services.llm_client.client.OpenAIClient._generate_text')
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
     def test_evaluate_relevance(self, mock_generate_text):
         mock_generate_text.return_value = "high"
 
@@ -54,7 +54,7 @@ class TestOpenAIClient(unittest.TestCase):
             )
         )
 
-    @patch('src.services.llm_client.client.OpenAIClient._generate_text')
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
     def test_generate_summary(self, mock_generate_text):
         mock_generate_text.return_value = '{"影響": "影響描述", "原因": "原因描述"}'
 
@@ -69,7 +69,7 @@ class TestOpenAIClient(unittest.TestCase):
             )
         )
 
-    @patch('src.services.llm_client.client.OpenAIClient._generate_text')
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
     def test_extract_search_keywords(self, mock_generate_text):
         mock_generate_text.return_value = '食品 價格'
 

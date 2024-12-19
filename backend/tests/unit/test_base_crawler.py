@@ -11,7 +11,7 @@ class MockNewsCrawler(NewsCrawlerBase):
     def get_headline(self, search_term: str, page: int | tuple[int, int]):
         return [Headline(title="Test Article", url="https://www.example.com/article")]
 
-    def parse(self, url: AnyHttpUrl | str):
+    def _parse(self, url: AnyHttpUrl | str):
         return News(
             title="Test Article",
             url=url,
@@ -54,7 +54,7 @@ class TestNewsCrawlerBase(unittest.TestCase):
         self.assertEqual(headlines[0].url, "https://www.example.com/article")
 
     def test_parse(self):
-        news = self.crawler.parse("https://www.example.com/article")
+        news = self.crawler.validate_and_parse("https://www.example.com/article")
         self.assertEqual(news.title, "Test Article")
         self.assertEqual(news.url, "https://www.example.com/article")
         self.assertEqual(news.time, "2023-09-08T00:00:00")
