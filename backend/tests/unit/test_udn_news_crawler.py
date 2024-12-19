@@ -2,6 +2,10 @@ import unittest
 from unittest.mock import patch, MagicMock
 from requests.models import Response
 from sqlalchemy.orm import Session
+from requests.exceptions import RequestException
+from bs4 import BeautifulSoup
+
+from src.services.exceptions_handler import InternalServerErrorException
 from src.services.crawler.udn_crawler import UDNCrawler, NewsWithSummary
 from src.services.crawler.exceptions import DomainMismatchException
 
@@ -97,6 +101,94 @@ class TestUDNCrawler(unittest.TestCase):
         invalid_url = "https://example.com/news/test-news"
         with self.assertRaises(DomainMismatchException):
             self.scraper.validate_and_parse(invalid_url)
+
+class TestUDNCrawlerExceptions(unittest.TestCase):
+
+    def setUp(self):
+        self.scraper = UDNCrawler(timeout=5)
+
+    @patch("src.services.crawler.udn_crawler.requests.get")
+    def test_perform_request_exception(self, mock_get):
+        """
+        Test the behavior of the _perform_request method when a RequestException occurs.
+        """
+        mock_get.side_effect = RequestException("Mocked Network Error")
+        with self.assertRaises(RequestException):
+            self.scraper._perform_request()
+
+        mock_get.assert_called_once()
+
+    def test_parse_headlines_key_error(self):
+        """
+        Test the behavior of the _parse_headlines method when the 'lists' key is missing in the JSON response.
+        """
+        mock_response = MagicMock(spec=Response)
+        mock_response.status_code = 200
+        mock_response.json.return_value = {}
+
+        with self.assertRaises(InternalServerErrorException):
+            self.scraper._parse_headlines(mock_response)
+
+    def test_extract_news_exception(self):
+        """
+        Test the behavior of the _extract_news method when the HTML structure is missing.
+        """
+        invalid_html = "<html></html>"
+        soup = BeautifulSoup(invalid_html, "html.parser")
+
+        with self.assertRaises(Exception): 
+            self.scraper._extract_news(soup, url="https://udn.com/news/test-news")
+
+    @patch("src.services.crawler.udn_crawler.Session")
+    def test_save_existing_news_exception(self, mock_session):
+        """
+        Test the behavior of the save method when a news article with the same URL already exists in the database.
+        """
+        mock_db = MagicMock(spec=Session)
+        mock_db.query.return_value.filter_by.return_value.first.return_value = True
+
+        news = NewsWithSummary(
+            title="Existing News Title",
+            url="https://udn.com/news/existing-news",
+            time="2023-09-08T00:00:00",
+            content="Existing news content.",
+            summary="Existing summary.",
+            reason="Existing reason."
+        )
+        self.scraper.save(news, mock_db)
+
+        mock_db.add.assert_not_called()
+        mock_db.commit.assert_not_called()
+
+    @patch("src.services.crawler.udn_crawler.Session")
+    def test_save_commit_exception(self, mock_session):
+        """
+        Test the behavior of the save method when the database commit fails.
+        """
+        mock_db = MagicMock(spec=Session)
+        mock_db.query.return_value.filter_by.return_value.first.return_value = None
+        mock_db.add.side_effect = None
+        mock_db.commit.side_effect = Exception("Database Commit Error")
+
+        news = MagicMock()
+        with self.assertRaises(Exception): 
+            self.scraper.save(news, mock_db)
+
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+        mock_db.rollback.assert_called_once()
+
+    @patch("src.services.crawler.udn_crawler.requests.get")
+    def test_parse_news_request_exception(self, mock_get):
+        """
+        Test the behavior of the _parse method when a network request exception occurs.
+        """
+        mock_get.side_effect = RequestException("Mocked Network Error")
+
+        with self.assertRaises(RequestException):
+            self.scraper._parse("https://udn.com/news/test-news")
+
+        mock_get.assert_called_once()
 
 
 if __name__ == "__main__":

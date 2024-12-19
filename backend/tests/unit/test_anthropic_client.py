@@ -6,6 +6,7 @@ from unittest.mock import patch
 from src.services.llm_client.client import AnthropicClient
 from src.services.llm_client.base import MessageInterface
 from src.services.llm_client.enum import RelevanceLevel
+from src.services.exceptions_handler import InvalidAiInputParamException, InternalServerErrorException
 
 if not os.getenv("NEWS_ANTROPIC_AI_KEY"):
     dotenv_path = os.path.join(os.path.dirname(__file__), "../../.env") 
@@ -30,7 +31,7 @@ class TestAnthropicClient(unittest.TestCase):
 
     @unittest.skipIf(not RUN_REAL_API_TESTS, "模擬 API 呼叫，跳過真實測試")
     def test_generate_summary_real(self):
-        result = self.client.generate_summary("一篇有關食品價格的新聞內容")
+        result = self.client.generate_summary("近期，全球食品價格因氣候異常和供應鏈中斷而上漲，特別是穀物和蔬菜價格受到影響，消費者支出壓力增大。")
         self.assertIn("summary", result)
         self.assertIn("reason", result)
 
@@ -84,6 +85,32 @@ class TestAnthropicClient(unittest.TestCase):
             )
         )
 
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
+    def test_generate_summary_invalid_json(self, mock_generate_text):
+        mock_generate_text.return_value = '{"invalid_json": "missing_fields"}'
+
+        with self.assertRaises(InvalidAiInputParamException):
+            self.client.generate_summary("一篇新聞內容")
+
+        mock_generate_text.assert_called_once()
+
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
+    def test_evaluate_relevance_invalid_response(self, mock_generate_text):
+        mock_generate_text.return_value = "invalid_level"
+
+        with self.assertRaises(InternalServerErrorException):
+            self.client.evaluate_relevance("食品價格上漲")
+
+        mock_generate_text.assert_called_once()
+
+    @patch('src.services.llm_client.client.AnthropicClient._generate_text')
+    def test_extract_search_keywords_exception(self, mock_generate_text):
+        mock_generate_text.side_effect = InternalServerErrorException()
+
+        with self.assertRaises(InternalServerErrorException):
+            self.client.extract_search_keywords("一段希望看到的新聞文字")
+
+        mock_generate_text.assert_called_once()
 
 if __name__ == '__main__':
     unittest.main()

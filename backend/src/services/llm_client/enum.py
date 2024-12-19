@@ -19,3 +19,9 @@ class RelevanceLevel(Enum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+class ResultFields(Enum):
+    SUMMARY_CH = "影響"
+    REASON_CH = "原因"
+    SUMMARY_EN = "summary"
+    REASON_EN = "reason"

@@ -39,7 +39,7 @@ def fetch_news_articles_by_keyword(search_term, is_initial=False):
         return crawler.get_headline(search_term=search_term, page=1)
     
 def add_news_summary(news, summary_data):
-    summary =  summary_data["影響"]
+    summary = summary_data["影響"]
     reason = summary_data["原因"]
     news_with_summary = NewsWithSummary(
         title=news.title,
