@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from .enums import AiModelType
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -9,4 +8,4 @@ class NewsSumaryRequestSchema(BaseModel):
 
 class NewsSumaryCustomModelSchema(BaseModel):
     content: str
-    ai_model: AiModelType
+    ai_model: str
