@@ -4,10 +4,11 @@ import abc
 from pydantic import AnyHttpUrl
 from tldextract import tldextract
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field, AnyHttpUrl
+import logging
 
 from .exceptions import DomainMismatchException
 
-from pydantic import BaseModel, Field, AnyHttpUrl
 
 
 class Headline(BaseModel):
@@ -104,6 +105,7 @@ class NewsCrawlerBase(metaclass=abc.ABCMeta):
         """
 
         if not self._is_valid_url(url):
+            logging.warning(f"[UDNCrawler] mistached domain. url: {url}")
             raise DomainMismatchException(url)
         return self._parse(url)
 

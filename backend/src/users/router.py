@@ -3,8 +3,8 @@ from sentry_sdk import capture_exception
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+import logging
 
-from src.services.logger import user_logger
 from src.auth.exceptions import (
     UserNotFoundException,
     IncorrectPasswordException,
@@ -41,7 +41,7 @@ async def login_for_access_token(
     try:
         user = validate_user_credentials(db, form_data.username, form_data.password)
     except (UserNotFoundException, IncorrectPasswordException) as e:
-        user_logger.user_login_failed(form_data.username)
+        logging.debug(f"Failed to login, {e.message}")
         raise HTTPException(status_code=400, detail=e.message)
 
     try:
@@ -51,10 +51,9 @@ async def login_for_access_token(
         )
     except JwtEncodeError as e:
         capture_exception(e)
-        user_logger.user_login_failed(form_data.username)
         raise HTTPException(status_code=500, detail="Unxcepted error occured, please tried again.")
 
-    user_logger.user_login(user.username)
+    logging.debug(f"{user.username} successfully logged in")
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/register")
@@ -68,15 +67,15 @@ def create_user(user: UserAuthSchema, db: Session = Depends(session_opener)):
     """
     existing_user = db.query(User).filter(User.username == user.username).first()
     if existing_user:
-        user_logger.user_already_exists(username=user.username)
+        logging.debug(f"Failed to register. User {user.username} already exist")
         raise HTTPException(status_code=400, detail=f"User '{user.username}' already exists")
     
     if len(user.username) > MAX_USERNAME_SIZE:
-        user_logger.username_too_long(username=user.username)
+        logging.debug(f"Failed to register. Username {user.username} to long.")
         raise HTTPException(status_code=400, detail=f"Username too long (maximum {MAX_USERNAME_SIZE} characters)")
     
     if len(user.password) > MAX_PASSWORD_SIZE:
-        user_logger.password_too_long(username=user.username)
+        logging.debug(f"Failed to register. Username {user.password} to long.")
         raise HTTPException(status_code=400, detail=f"Password too long (maximum {MAX_PASSWORD_SIZE} characters)")
 
     hashed_password = pwd_context.hash(user.password)
@@ -90,7 +89,7 @@ def create_user(user: UserAuthSchema, db: Session = Depends(session_opener)):
     except Exception as e:
         db.rollback()
         capture_exception(e)
-        user_logger.user_registration_error(username=user.username, error=e)
+        logging.warning(f"Failed to register user: {user.username}, error: {str(e)}, skipping.")
         raise HTTPException(status_code=500, detail=f"An unexcepted error occured, failed to register.")
 
 @router.get("/me")

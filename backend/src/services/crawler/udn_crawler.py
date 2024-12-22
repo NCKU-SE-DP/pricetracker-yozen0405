@@ -39,8 +39,8 @@ from requests.exceptions import RequestException
 import requests
 from sqlalchemy.orm import Session
 from sentry_sdk import capture_exception
+import logging
 
-from src.services.logger import udn_crawler_logger
 from .crawler_base import NewsCrawlerBase, Headline, News, NewsWithSummary
 from src.news.models import NewsArticle
 from .config import crawler_config
@@ -85,7 +85,6 @@ class UDNCrawler(NewsCrawlerBase):
         for page_num in page_range:
             fetched_headlines = self._fetch_news(page=page_num, search_term=search_term)
             headlines.extend(fetched_headlines)
-            udn_crawler_logger.fetch_page_success(search_term=search_term, page=page_num, count=len(fetched_headlines))
         return headlines
 
     def _fetch_news(self, page: int, search_term: str) -> list[Headline]:
@@ -108,11 +107,10 @@ class UDNCrawler(NewsCrawlerBase):
             response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
         except RequestException as e:
-            udn_crawler_logger.request_failed(params, error=e)
+            logging.warning(f"[UDNCrawler] Failed to send request to udn api, {str(e)}")
             capture_exception(e)
             raise InvalidResponseException()
         
-        udn_crawler_logger.request_success(params=params, url=url)
         return response
 
     @staticmethod
@@ -129,29 +127,31 @@ class UDNCrawler(NewsCrawlerBase):
             return [Headline(**item) for item in processed_items]
         except (KeyError, ValueError, TypeError) as e:
             capture_exception(e)
+            logging.warning(f"[UDNCrawler] Headlines parsing failed. error: {str(e)}")
             raise InvalidHeadlineExceptions()
 
     def _parse(self, url: str) -> News:
-        udn_crawler_logger.parse_news_start(url=url)
+        logging.debug(f"[UDNCrawler] Parsing started, url: {url}")
         try:
             response = self._perform_request(url=url)
         except InvalidResponseException:
-            udn_crawler_logger.parse_news_failed(url=url, error=e)
+            logging.warning(f"")
             raise
 
         try:
             soup = BeautifulSoup(response.text, "html.parser")
             news = self._extract_news(soup, url)
-        except ExtractNewsException as e:
-            udn_crawler_logger.parse_news_failed(url=url, error=e)
+        except ExtractNewsException:
+            logging.warning(f"[UDNCrawler] Failed to parse news, some error occured when extracting")
             raise ParsingException()
 
-        udn_crawler_logger.parse_news_success(url=url)
+        logging.debug(f"[UDNCrawler] Parsing success, url: {url}")
         return news
 
     @staticmethod
     def _extract_news(soup: BeautifulSoup, url: str) -> News:
         try:
+            logging.debug(f"[UDNCrawler] Extracting news content from: {url}")
             title = soup.find("h1", class_="article-content__title").text
             time = soup.find("time", class_="article-content__time").text
             content_section = soup.find("section", class_="article-content__editor")
@@ -163,11 +163,12 @@ class UDNCrawler(NewsCrawlerBase):
             content = " ".join(paragraphs)
 
         except AttributeError as e:
-            udn_crawler_logger.extract_news_failed(url=url, error=e)
+            logging.warning(f"Failed to extract news. error: {str(e)}")
             capture_exception(e)
             raise ExtractNewsException()
 
-        udn_crawler_logger.extract_news_success(url=url, title=title)
+        logging.debug(f"[UDNCrawler] Successfully extracted news. title: {title}")
+
         return News(
             title=title,
             url=url,
@@ -176,12 +177,11 @@ class UDNCrawler(NewsCrawlerBase):
         )
     
     def save(self, news: NewsWithSummary, db: Session):
+        logging.debug(f"[UDNCrawler] Saving news article: {news.title}")
         existing_news = db.query(NewsArticle).filter_by(url=news.url).first()
         if existing_news:
-            udn_crawler_logger.save_news_skipped(url=news.url)
-            e = SavingExistingNewsException(news.url)
-            capture_exception(e)
-            raise e
+            logging.warning(f"[UDNCrawler] News already exist, skipping. title: {news.title}")
+            raise SavingExistingNewsException(news.url)
 
         new_article = NewsArticle(
             url=news.url,
@@ -193,13 +193,8 @@ class UDNCrawler(NewsCrawlerBase):
         )
 
         db.add(new_article)
-        try:
-            self._commit_changes(db)
-        except DatabaseSaveException as e:
-            udn_crawler_logger.save_news_failed(url=news.url, error=e)
-            raise
-
-        udn_crawler_logger.save_news_success(url=news.url)
+        self._commit_changes(db)
+        logging.debug(f"[UDNCrawler] Successfully saved news. title: {news.title}")
         
     @staticmethod
     def _commit_changes(db: Session):
@@ -208,6 +203,7 @@ class UDNCrawler(NewsCrawlerBase):
         except Exception as e:
             db.rollback()
             capture_exception(e)
+            logging.warning(f"[UDNCrawler] Unable to commit changes into database, error: {str(e)}")
             raise DatabaseSaveException()
         finally:
             db.close()

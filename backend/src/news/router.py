@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+import logging
 
 from ..dependencies import session_opener, get_current_user
-from src.services.logger import news_logger
 from src.services.llm_client.exceptions import LLMClientExceptionBase
 from src.services.crawler.exceptions import CrawlerExceptionsBase
 from .schemas import (
@@ -57,7 +57,7 @@ def get_user_specific_news(
 async def search_news_articles(request: PromptRequest):
     prompt = request.prompt
     news_list = []
-    news_logger.searching_udn_news()
+    logging.debug("Starting to search news")
 
     try:
         keywords = openai_client.extract_search_keywords(prompt)
@@ -72,13 +72,13 @@ async def search_news_articles(request: PromptRequest):
     for news in news_items:
         try:
             detailed_news = validate_and_parse(news).model_dump()
-        except CrawlerExceptionsBase as e:
-            news_logger.search_udn_failed(news.url, error=e)
+        except CrawlerExceptionsBase:
+            logging.warning(f"Failed to parse news for {news.url}")
             continue
 
         detailed_news["id"] = next(article_id_counter)
         news_list.append(detailed_news)
-        news_logger.search_udn_success(detailed_news["title"])
+        logging.debug(f"Successfully searched news. title: {detailed_news['title']}")
     
     return sorted(news_list, key=lambda x: x["time"], reverse=True)
 

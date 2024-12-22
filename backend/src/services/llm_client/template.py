@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 import json
 from sentry_sdk import capture_exception
+import logging
 
 from .base import MessageInterface, LLMClientBase
 from .enum import PromptTemplate, RelevanceLevel, ResultFields
-from src.services.logger import llm_client_logger
 from .exceptions import (
     LLMRequestFailedException,
     InvalidResponseFormatException,
@@ -65,13 +65,14 @@ class LLMClientTemplate(LLMClientBase, ABC):
         try:
             result_json = json.loads(result)
         except json.JSONDecodeError as e:
-            llm_client_logger.parse_summary_failed(summary=result)
+            logging.warning(f"[LLM Client] Failed to parse summary: {result}", exc_info=True)
             capture_exception(e)
             raise InvalidResponseFormatException()
         
         if ResultFields.SUMMARY_CH.value not in result_json or ResultFields.REASON_CH.value not in result_json:
-            llm_client_logger.parse_summary_failed(summary=result)
-            e = InvalidResponseFormatException(f"Missing expected fields in AI response. Response: {result_json}")
+            error_message = f"Missing expected fields in AI response. Response: {result_json}"
+            logging.warning("[LLM Client] " + error_message)
+            e = InvalidResponseFormatException(error_message)
             capture_exception(e)
             raise e
         
@@ -87,11 +88,10 @@ class LLMClientTemplate(LLMClientBase, ABC):
         try:
             result = self._generate_text(messages=messages)
             summary = self._parse_summary_result(result)
-        except (LLMRequestFailedException, InvalidResponseFormatException) as e:
-            llm_client_logger.summary_generate_failed(text=text, error=e)
+        except (LLMRequestFailedException, InvalidResponseFormatException):
+            logging.warning(f"[LLM Client] Failed to generate summary for text: {text}", exc_info=True)
             raise
 
-        llm_client_logger.summary_generate_success(text=text, summary=summary)
         return summary
 
     def evaluate_relevance(self, text: str) -> RelevanceLevel:
@@ -99,29 +99,27 @@ class LLMClientTemplate(LLMClientBase, ABC):
         messages = self._generate_messages(prompt=PromptTemplate.RELEVANCE, text=text)
         try:
             result = self._generate_text(messages=messages)
-        except LLMRequestFailedException as e:
-            llm_client_logger.relevance_evaluate_failed(text=text, error=e)
+        except LLMRequestFailedException:
+            logging.warning(f"[LLM Client] Failed to evaluate relevance for text: {text}", exc_info=True)
             raise
 
         if result in RelevanceLevel._value2member_map_:
             relevance = RelevanceLevel(result)
         else:
-            llm_client_logger.unexpected_relevance_level(result=result)
+            logging.warning(f"[LLM Client] Unexpected relevance level: {result}")
             raise RelevanceLevelException()
 
-        llm_client_logger.relevance_evaluate_success(text=text, relevance=relevance.value)
-        return RelevanceLevel(result)
+        return relevance
 
     def extract_search_keywords(self, text: str) -> str:
         """Extract search keywords using the specified model."""
         messages = self._generate_messages(prompt=PromptTemplate.KEYWORDS, text=text)
         try:
             keywords = self._generate_text(messages=messages)
-        except LLMRequestFailedException as e:
-            llm_client_logger.keywords_extracte_failed(text=text, error=e)
+        except LLMRequestFailedException:
+            logging.warning(f"[LLM Client] Failed to evaluate relevance for text: {text}", exc_info=True)
             raise
 
-        llm_client_logger.keywords_extracte_success(text=text, keywords=keywords)
         return keywords
     
     def _generate_text(self, messages: MessageInterface) -> str:
@@ -134,7 +132,7 @@ class LLMClientTemplate(LLMClientBase, ABC):
                 messages=messages.to_dict,
             )
         except Exception as e:
-            llm_client_logger.generate_text_failed(e)
+            logging.warning(f"[LLM Client] Failed to generate text using the client. error: {e}")
             capture_exception(e)
             raise LLMRequestFailedException()
         
