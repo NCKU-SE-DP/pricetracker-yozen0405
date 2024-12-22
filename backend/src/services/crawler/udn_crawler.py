@@ -135,7 +135,7 @@ class UDNCrawler(NewsCrawlerBase):
         try:
             response = self._perform_request(url=url)
         except InvalidResponseException:
-            logging.warning(f"")
+            logging.warning(f"[UDNCralwer] Failed to get response from udn")
             raise
 
         try:
