@@ -3,3 +3,4 @@ __pycache__
 .env
 .DS_store
 logs/
+news_database.db
