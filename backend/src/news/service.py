@@ -9,7 +9,7 @@ import logging
 
 from src.services.llm_client.client import OpenAIClient, AnthropicClient
 from .config import news_config
-from .constant import AiModelType
+from .constant import AiModelType, ARTICLE_ID_START
 from .models import NewsArticle
 from src.services.llm_client.enum import RelevanceLevel
 from src.services.llm_client.exceptions import InvalidResponseFormatException, LLMRequestFailedException, LLMClientExceptionBase
@@ -25,7 +25,7 @@ from .utils import (
 )
 
 # Unique ID counter for generating temporary article IDs in memory.
-article_id_counter = itertools.count(start=1000000)
+article_id_counter = itertools.count(start=ARTICLE_ID_START)
 
 def fetch_and_process_news(is_initial=False):
     """
