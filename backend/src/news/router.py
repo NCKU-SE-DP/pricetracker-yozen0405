@@ -97,6 +97,7 @@ def upvote_article(
     message = toggle_upvote(article_id, user.id, db)
     return {"message": message}
 
+
 @router.post("/news_summary_custom_model")
 async def news_summary_custom_model(
         payload: NewsSumaryCustomModelSchema,

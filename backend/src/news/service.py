@@ -91,8 +91,8 @@ def get_article_upvote_details(article_id, uid, db):
     if uid:
         has_voted = (
             db.query(user_news_association_table)
-            .filter_by(news_articles_id=article_id, user_id=uid)
-            .first() is not None
+            .filter_by(news_articles_id=article_id)
+            .count()
         )
 
     return upvote_count, has_voted

@@ -41,6 +41,7 @@ from sqlalchemy.orm import Session
 from sentry_sdk import capture_exception
 import logging
 
+from src.services.logger import udn_crawler_logger
 from .crawler_base import NewsCrawlerBase, Headline, News, NewsWithSummary
 from src.news.models import NewsArticle
 from .config import crawler_config
@@ -70,7 +71,13 @@ class UDNCrawler(NewsCrawlerBase):
         :return: A list of Headline namedtuples containing the title and URL of news articles.
         :rtype: list[Headline]
         """
-        return self.get_headline(search_term, page=(1, 10))
+        try:
+            headlines = self.get_headline(search_term, page=(1, 10))
+            udn_crawler_logger.startup_success(search_term, count=len(headlines))
+            return headlines
+        except Exception as e:
+            udn_crawler_logger.startup_failed(search_term, error=e)
+            raise
 
     def get_headline(
         self, search_term: str, page: int | tuple[int, int]
@@ -104,6 +111,8 @@ class UDNCrawler(NewsCrawlerBase):
         if url is None:
             url = self.news_website_url
         try:
+            if url is None:
+                url = self.news_website_url
             response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
         except RequestException as e:
