@@ -13,7 +13,7 @@ from src.dependencies import session_opener
 from src.news.models import NewsArticle
 from src.models import user_news_association_table
 from src.news.schemas import NewsSumaryRequestSchema, NewsSumaryCustomModelSchema
-from src.news.enums import AiModelType
+from src.news.constant import AiModelType
 from src.auth.service import pwd_context
 from src.services.crawler.crawler_base import Headline
 

@@ -9,7 +9,7 @@ import logging
 
 from src.services.llm_client.client import OpenAIClient, AnthropicClient
 from .config import news_config
-from .enums import AiModelType
+from .constant import AiModelType
 from .models import NewsArticle
 from src.services.llm_client.enum import RelevanceLevel
 from src.services.llm_client.exceptions import InvalidResponseFormatException, LLMRequestFailedException, LLMClientExceptionBase
