@@ -94,6 +94,7 @@ def get_article_upvote_details(article_id, uid, db):
             .filter_by(news_articles_id=article_id)
             .count()
         )
+        has_voted = bool(has_voted)
 
     return upvote_count, has_voted
     
