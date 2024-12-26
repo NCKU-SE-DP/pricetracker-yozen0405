@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
 import json
+from sentry_sdk import capture_exception
+import logging
 
 from .base import MessageInterface, LLMClientBase
 from .enum import PromptTemplate, RelevanceLevel, ResultFields
-from src.services.exceptions_handler import InternalServerErrorException, InvalidAiInputParamException
-from src.services.logger import llm_client_logger
+from .exceptions import (
+    LLMRequestFailedException,
+    InvalidResponseFormatException,
+    RelevanceLevelException
+)
 
 class LLMClientTemplate(LLMClientBase, ABC):
     """
@@ -59,57 +64,63 @@ class LLMClientTemplate(LLMClientBase, ABC):
         """
         try:
             result_json = json.loads(result)
-            if ResultFields.SUMMARY_CH.value not in result_json or ResultFields.REASON_CH.value not in result_json:
-                llm_client_logger.parse_summary_failed(summary=result)
-                raise InvalidAiInputParamException()
-            
-            return {
-                ResultFields.SUMMARY_EN.value: result_json[ResultFields.SUMMARY_CH.value],
-                ResultFields.REASON_EN.value: result_json[ResultFields.REASON_CH.value]
-            }
-        except json.JSONDecodeError:
-            llm_client_logger.parse_summary_failed(summary=result)
-            raise InvalidAiInputParamException(result)
+        except json.JSONDecodeError as e:
+            logging.warning(f"[LLM Client] Failed to parse summary: {result}", exc_info=True)
+            capture_exception(e)
+            raise InvalidResponseFormatException()
+        
+        if ResultFields.SUMMARY_CH.value not in result_json or ResultFields.REASON_CH.value not in result_json:
+            error_message = f"Missing expected fields in AI response. Response: {result_json}"
+            logging.warning("[LLM Client] " + error_message)
+            e = InvalidResponseFormatException(error_message)
+            capture_exception(e)
+            raise e
+        
+        return {
+            ResultFields.SUMMARY_EN.value: result_json[ResultFields.SUMMARY_CH.value],
+            ResultFields.REASON_EN.value: result_json[ResultFields.REASON_CH.value]
+        }
 
     def generate_summary(self, text: str) -> dict:
         """Generate a summary using the specified model."""
+        messages = self._generate_messages(prompt=PromptTemplate.SUMMARY, text=text)
+
         try:
-            messages = self._generate_messages(prompt=PromptTemplate.SUMMARY, text=text)
             result = self._generate_text(messages=messages)
             summary = self._parse_summary_result(result)
-            llm_client_logger.summary_generate_success(text=text, summary=summary)
-            return summary
-        except Exception as e:
-            llm_client_logger.summary_generate_failed(text=text, error=e)
+        except (LLMRequestFailedException, InvalidResponseFormatException):
+            logging.warning(f"[LLM Client] Failed to generate summary for text: {text}", exc_info=True)
             raise
+
+        return summary
 
     def evaluate_relevance(self, text: str) -> RelevanceLevel:
         """Evaluate relevance using the specified model."""
+        messages = self._generate_messages(prompt=PromptTemplate.RELEVANCE, text=text)
         try:
-            messages = self._generate_messages(prompt=PromptTemplate.RELEVANCE, text=text)
             result = self._generate_text(messages=messages)
-
-            if result in RelevanceLevel._value2member_map_:
-                relevance = RelevanceLevel(result)
-                llm_client_logger.relevance_evaluate_success(text=text, relevance=relevance.value)
-                return RelevanceLevel(result)
-            else:
-                llm_client_logger.unexpected_relevance_level(result=result)
-                raise InternalServerErrorException("Unxcepted relevance level")
-        except Exception as e:
-            llm_client_logger.relevance_evaluate_failed(text=text, error=e)
+        except LLMRequestFailedException:
+            logging.warning(f"[LLM Client] Failed to evaluate relevance for text: {text}", exc_info=True)
             raise
+
+        if result in RelevanceLevel._value2member_map_:
+            relevance = RelevanceLevel(result)
+        else:
+            logging.warning(f"[LLM Client] Unexpected relevance level: {result}")
+            raise RelevanceLevelException()
+
+        return relevance
 
     def extract_search_keywords(self, text: str) -> str:
         """Extract search keywords using the specified model."""
+        messages = self._generate_messages(prompt=PromptTemplate.KEYWORDS, text=text)
         try:
-            messages = self._generate_messages(prompt=PromptTemplate.KEYWORDS, text=text)
             keywords = self._generate_text(messages=messages)
-            llm_client_logger.keywords_extracte_success(text=text, keywords=keywords)
-            return keywords
-        except Exception as e:
-            llm_client_logger.keywords_extracte_failed(text=text, error=e)
+        except LLMRequestFailedException:
+            logging.warning(f"[LLM Client] Failed to evaluate relevance for text: {text}", exc_info=True)
             raise
+
+        return keywords
     
     def _generate_text(self, messages: MessageInterface) -> str:
         """
@@ -120,7 +131,9 @@ class LLMClientTemplate(LLMClientBase, ABC):
                 model=self.model,
                 messages=messages.to_dict,
             )
-            return response.choices[0].message.content
         except Exception as e:
-            llm_client_logger.generate_text_failed(e)
-            raise InternalServerErrorException(e)
+            logging.warning(f"[LLM Client] Failed to generate text using the client. error: {e}")
+            capture_exception(e)
+            raise LLMRequestFailedException()
+        
+        return response.choices[0].message.content

@@ -5,9 +5,15 @@ from sqlalchemy.orm import Session
 from requests.exceptions import RequestException
 from bs4 import BeautifulSoup
 
-from src.services.exceptions_handler import InternalServerErrorException
 from src.services.crawler.udn_crawler import UDNCrawler, NewsWithSummary
-from src.services.crawler.exceptions import DomainMismatchException
+from src.services.crawler.exceptions import (
+    DomainMismatchException, 
+    InvalidHeadlineExceptions, 
+    InvalidResponseException, 
+    ExtractNewsException, 
+    SavingExistingNewsException,
+    DatabaseSaveException
+)
 
 class TestUDNCrawler(unittest.TestCase):
 
@@ -113,7 +119,7 @@ class TestUDNCrawlerExceptions(unittest.TestCase):
         Test the behavior of the _perform_request method when a RequestException occurs.
         """
         mock_get.side_effect = RequestException("Mocked Network Error")
-        with self.assertRaises(RequestException):
+        with self.assertRaises(InvalidResponseException):
             self.scraper._perform_request()
 
         mock_get.assert_called_once()
@@ -126,7 +132,7 @@ class TestUDNCrawlerExceptions(unittest.TestCase):
         mock_response.status_code = 200
         mock_response.json.return_value = {}
 
-        with self.assertRaises(InternalServerErrorException):
+        with self.assertRaises(InvalidHeadlineExceptions):
             self.scraper._parse_headlines(mock_response)
 
     def test_extract_news_exception(self):
@@ -136,7 +142,7 @@ class TestUDNCrawlerExceptions(unittest.TestCase):
         invalid_html = "<html></html>"
         soup = BeautifulSoup(invalid_html, "html.parser")
 
-        with self.assertRaises(Exception): 
+        with self.assertRaises(ExtractNewsException): 
             self.scraper._extract_news(soup, url="https://udn.com/news/test-news")
 
     @patch("src.services.crawler.udn_crawler.Session")
@@ -155,10 +161,8 @@ class TestUDNCrawlerExceptions(unittest.TestCase):
             summary="Existing summary.",
             reason="Existing reason."
         )
-        self.scraper.save(news, mock_db)
-
-        mock_db.add.assert_not_called()
-        mock_db.commit.assert_not_called()
+        with self.assertRaises(SavingExistingNewsException):
+            self.scraper.save(news, mock_db)
 
     @patch("src.services.crawler.udn_crawler.Session")
     def test_save_commit_exception(self, mock_session):
@@ -171,7 +175,7 @@ class TestUDNCrawlerExceptions(unittest.TestCase):
         mock_db.commit.side_effect = Exception("Database Commit Error")
 
         news = MagicMock()
-        with self.assertRaises(Exception): 
+        with self.assertRaises(DatabaseSaveException): 
             self.scraper.save(news, mock_db)
 
         mock_db.add.assert_called_once()
@@ -185,7 +189,7 @@ class TestUDNCrawlerExceptions(unittest.TestCase):
         """
         mock_get.side_effect = RequestException("Mocked Network Error")
 
-        with self.assertRaises(RequestException):
+        with self.assertRaises(InvalidResponseException):
             self.scraper._parse("https://udn.com/news/test-news")
 
         mock_get.assert_called_once()

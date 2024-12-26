@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+import logging
 
 from ..dependencies import session_opener, get_current_user
-from .config import news_config
-from .enums import AiModelType
-from src.services.llm_client.client import OpenAIClient, AnthropicClient
-from src.services.exceptions_handler import UnsupportedFeatureException, NoResourceFoundException
-from src.services.logger import news_logger
+from src.services.llm_client.exceptions import LLMClientExceptionBase
+from src.services.crawler.exceptions import CrawlerExceptionsBase
 from .schemas import (
     PromptRequest,
     NewsSumaryRequestSchema,
@@ -17,6 +15,7 @@ from .service import (
     article_id_counter,
     fetch_news_with_details,
     toggle_upvote,
+    generate_summary
 )
 from .utils import (
     fetch_news_articles_by_keyword,
@@ -58,29 +57,36 @@ def get_user_specific_news(
 async def search_news_articles(request: PromptRequest):
     prompt = request.prompt
     news_list = []
-    news_logger.searching_udn_news()
-    keywords = openai_client.extract_search_keywords(prompt)
-    news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
+    logging.debug("Starting to search news")
+
+    try:
+        keywords = openai_client.extract_search_keywords(prompt)
+    except LLMClientExceptionBase as e:
+        raise HTTPException(status_code=500, detail="Unexcepted error happened, please try later")
+
+    try:
+        news_items = fetch_news_articles_by_keyword(keywords, is_initial=False)
+    except CrawlerExceptionsBase as e:
+        raise HTTPException(status_code=500, detail="Unexcepted error happened, please try later")
+
     for news in news_items:
         try:
             detailed_news = validate_and_parse(news).model_dump()
-            detailed_news["id"] = next(article_id_counter)
-            news_list.append(detailed_news)
-            news_logger.search_udn_success(detailed_news["title"])
-        except Exception as e:
-            news_logger.search_udn_failed(news.url, error=e)
+        except CrawlerExceptionsBase:
+            logging.warning(f"Failed to parse news for {news.url}")
+            continue
+
+        detailed_news["id"] = next(article_id_counter)
+        news_list.append(detailed_news)
+        logging.debug(f"Successfully searched news. title: {detailed_news['title']}")
     
-    if (len(news_items)):
-        return sorted(news_list, key=lambda x: x["time"], reverse=True)
-    else:
-        raise NoResourceFoundException()
+    return sorted(news_list, key=lambda x: x["time"], reverse=True)
 
 @router.post("/news_summary")
 async def news_summary(
         payload: NewsSumaryRequestSchema, user=Depends(get_current_user)
 ):
-    result = openai_client.generate_summary(payload.content)
-    return result
+    return generate_summary(payload.content)
 
 @router.post("/{article_id}/upvote")
 def upvote_article(
@@ -88,28 +94,13 @@ def upvote_article(
         db=Depends(session_opener),
         user=Depends(get_current_user),
 ):
-    try:
-        message = toggle_upvote(article_id, user.id, db)
-        news_logger.upvote_success(article_id=article_id, user_id=user.id)
-        return {"message": message}
-    except Exception as e:
-        news_logger.upvote_failed(article_id=article_id, user_id=user.id, error=e)
-        raise
+    message = toggle_upvote(article_id, user.id, db)
+    return {"message": message}
+
 
 @router.post("/news_summary_custom_model")
 async def news_summary_custom_model(
         payload: NewsSumaryCustomModelSchema,
         user=Depends(get_current_user)
 ):
-    """
-    Endpoint for generating a summary using either OpenAI or Anthropic.
-    """
-    if payload.ai_model == AiModelType.OPENAI:
-        client = OpenAIClient(api_key=news_config.OPEN_AI_KEY)
-    elif payload.ai_model == AiModelType.ANTHROPIC:
-        client = AnthropicClient(api_key=news_config.ANTROPIC_AI_KEY)
-    else:
-        raise UnsupportedFeatureException(feature_name=f"model type: {payload.ai_model}")
-
-    result = client.generate_summary(payload.content)
-    return result
+    return generate_summary(payload.content, payload.ai_model)

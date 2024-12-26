@@ -6,7 +6,11 @@ from unittest.mock import patch
 from src.services.llm_client.client import AnthropicClient
 from src.services.llm_client.base import MessageInterface
 from src.services.llm_client.enum import RelevanceLevel
-from src.services.exceptions_handler import InvalidAiInputParamException, InternalServerErrorException
+from src.services.llm_client.exceptions import (
+    LLMRequestFailedException,
+    InvalidResponseFormatException,
+    RelevanceLevelException
+)
 
 if not os.getenv("NEWS_ANTROPIC_AI_KEY"):
     dotenv_path = os.path.join(os.path.dirname(__file__), "../../.env") 
@@ -89,7 +93,7 @@ class TestAnthropicClient(unittest.TestCase):
     def test_generate_summary_invalid_json(self, mock_generate_text):
         mock_generate_text.return_value = '{"invalid_json": "missing_fields"}'
 
-        with self.assertRaises(InvalidAiInputParamException):
+        with self.assertRaises(InvalidResponseFormatException):
             self.client.generate_summary("一篇新聞內容")
 
         mock_generate_text.assert_called_once()
@@ -98,16 +102,16 @@ class TestAnthropicClient(unittest.TestCase):
     def test_evaluate_relevance_invalid_response(self, mock_generate_text):
         mock_generate_text.return_value = "invalid_level"
 
-        with self.assertRaises(InternalServerErrorException):
+        with self.assertRaises(RelevanceLevelException):
             self.client.evaluate_relevance("食品價格上漲")
 
         mock_generate_text.assert_called_once()
 
     @patch('src.services.llm_client.client.AnthropicClient._generate_text')
     def test_extract_search_keywords_exception(self, mock_generate_text):
-        mock_generate_text.side_effect = InternalServerErrorException()
+        mock_generate_text.side_effect = LLMRequestFailedException()
 
-        with self.assertRaises(InternalServerErrorException):
+        with self.assertRaises(LLMRequestFailedException):
             self.client.extract_search_keywords("一段希望看到的新聞文字")
 
         mock_generate_text.assert_called_once()

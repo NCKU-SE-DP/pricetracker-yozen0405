@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Query
-from .config import pricing_config
-from src.services.exceptions_handler import NoResourceFoundException, InternalServerErrorException
-from src.services.logger import price_logger
+from fastapi import APIRouter, Query, HTTPException
+from sentry_sdk import capture_exception
 import requests
+import logging
+
+from .config import pricing_config
 
 router = APIRouter(
     prefix="/prices",
@@ -16,21 +17,23 @@ def get_necessities_prices(
 ):
     url = pricing_config.NECESSITIES_PRICE_API_URL
     params = {"CategoryName": category, "Name": commodity}
-
-    price_logger.sended_request(url, params)
+    
     try:
         response = requests.get(
             url=url,
             params=params,
         )
         response.raise_for_status()
-        response = response.json()
-        price_logger.response_success()
-        return response
-    except ValueError:
-        price_logger.no_resource_found(url, params)
-        raise NoResourceFoundException()
     except requests.exceptions.RequestException as e:
-        price_logger.internal_error(e)
-        raise InternalServerErrorException(e)
+        capture_exception(e)
+        logging.warning(f"Unable to interact with pricing api server, error: {e}")
+        raise HTTPException(status_code=500, detail="Our price server is down, please try later")
+    
+    try:
+        response = response.json()
+    except ValueError:
+        logging.debug(f"Found no resources by category: {category}, commodity: {commodity}")
+        raise HTTPException(status_code=404, detail="No resources found.")
+
+    return response
     
